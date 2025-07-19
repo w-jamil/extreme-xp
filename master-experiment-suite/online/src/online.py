@@ -123,9 +123,9 @@ if __name__ == "__main__":
     if data_ready:
     
         algorithms_to_run = {
-            "AP": AP,
-            "PERCEPT": PERCEPT,
-            "OGL": OGL
+            "PassiveAggressive": AP,
+            "Perceptron": PERCEPT,
+            "GradientLearning": OGL
         }
         
         # --- SCRIPT START ---

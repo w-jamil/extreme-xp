@@ -57,9 +57,9 @@ class ContinualLearningSimulator:
         print("\nInitializing persistent algorithms...")
         n_features = list(self.tasks_processed.values())[0]["X"].shape[1]
         self.algorithms = {
-            "PA": PassiveAggressive(n_features=n_features),
+            "PassiveAggressive": PassiveAggressive(n_features=n_features),
             "Perceptron": Perceptron(n_features=n_features),
-            "GL": GradientLearning(n_features=n_features)
+            "GradientLearning": GradientLearning(n_features=n_features)
         }
         
         num_rounds = len(self.task_names)
