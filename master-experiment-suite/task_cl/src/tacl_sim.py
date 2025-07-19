@@ -142,8 +142,8 @@ class OnlineStreamSimulator:
                 "Precision": precision,
                 "TPR": tpr,
                 "FPR": fpr,
-                "Avg. Forgetting": avg_forgetting,
-                "Std. Forgetting": std_forgetting
+                "Forgetting": avg_forgetting,
+                "Deviation": std_forgetting
             })
             
         return pd.DataFrame(final_results)

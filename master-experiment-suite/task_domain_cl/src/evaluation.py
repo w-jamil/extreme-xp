@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.metrics import confusion_matrix, accuracy_score
 import matplotlib.pyplot as plt
+import os
 
 def evaluate_on_chunk(algo, X_eval, y_eval):
     """Evaluates a model's accuracy on a chunk of data."""
@@ -25,16 +26,28 @@ def calculate_final_metrics(algo, X_eval, y_eval):
     
     return precision, recall, fnr
 
-def plot_forgetting_over_time(forgetting_history_dict, task_names_list):
-    """Plots the average forgetting caused by training on each task."""
-    print("\n--- Generating Forgetting Over Time Plot ---")
+def plot_forgetting_over_time(forgetting_history_dict, task_names_list, output_path):
+    """
+    Plots the average forgetting for each algorithm over the training rounds
+    and saves the figure to the specified path.
+
+    Args:
+        forgetting_history (dict): A dictionary containing forgetting DataFrames for each algo.
+        task_names (list): A list of the task names for x-axis labeling.
+        output_path (str): The file path to save the plot image (e.g., 'results/forgetting_plot.png').
+    """
+    print(f"\n--- Generating and saving forgetting plot to '{output_path}' ---")
+    
+    # Use a non-interactive backend, essential for running in Docker
+    plt.switch_backend('Agg')
+    
     plt.style.use('seaborn-v0_8-whitegrid')
     fig, ax = plt.subplots(figsize=(16, 9))
 
     for algo_name, forgetting_df in forgetting_history_dict.items():
-        # Get the max forgetting value for each round (column)
         forgetting_timeline = forgetting_df.max(axis=0).dropna()
-        ax.plot(forgetting_timeline.index, forgetting_timeline.values, marker='o', linestyle='-', label=algo_name)
+        if not forgetting_timeline.empty:
+            ax.plot(forgetting_timeline.index, forgetting_timeline.values, marker='o', linestyle='-', label=algo_name)
 
     # Add vertical lines to delineate major task type changes
     last_base_task = ""
@@ -44,12 +57,24 @@ def plot_forgetting_over_time(forgetting_history_dict, task_names_list):
             ax.axvline(x=i, color='gray', linestyle='--', alpha=0.7)
             last_base_task = base_task
             
-    ax.set_title('Average Forgetting Caused by Each Training Round', fontsize=16)
-    ax.set_xlabel('Training Round (Task Trained)', fontsize=12)
-    ax.set_ylabel('Average Forgetting Score (Higher is Worse)', fontsize=12)
+    ax.set_title('Average Forgetting Caused by Each Training Round', fontsize=18, pad=20)
+    ax.set_xlabel('Training Round (Task Trained)', fontsize=14)
+    ax.set_ylabel('Average Forgetting Score (Higher is Worse)', fontsize=14)
     ax.set_xticks(range(len(task_names_list)))
     ax.set_xticklabels(task_names_list, rotation=45, ha='right')
     ax.legend(title='Algorithm', fontsize=11)
     ax.set_ylim(bottom=0)
+    ax.grid(True, which='both', linestyle='--', linewidth=0.5)
+    
     fig.tight_layout()
-    plt.show()
+    
+    try:
+        # Ensure the directory for the plot exists
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        # Save the figure to the specified path
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close(fig) # Close the figure to free up memory
+        print("--> Plot saved successfully.")
+    except Exception as e:
+        print(f"ERROR: Could not save the plot. Reason: {e}")
+# --- END OF THE FIX ---

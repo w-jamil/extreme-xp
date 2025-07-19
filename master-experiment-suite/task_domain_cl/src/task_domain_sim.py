@@ -158,7 +158,7 @@ class ContinualLearningSimulator:
             print(algo_df_for_print.round(4).to_string(index=False))
 
         print("\n" + "-"*70)
-        print("FORGETTING ANALYSIS (Overall Average)")
+        print("FORGETTING ANALYSIS")
         print("-"*70)
         for algo_name, score in overall_forgetting_scores.items():
             print(f"  - {algo_name:<12}: {score:.4f}")
@@ -171,7 +171,7 @@ class ContinualLearningSimulator:
             print(f"\nERROR: Could not save results to CSV. Reason: {e}")
 
         # --- 5. Generate Plot ---
-        plot_forgetting_over_time(self.forgetting_history, self.task_names)
+        plot_forgetting_over_time(self.forgetting_history, self.task_names, self.output_plot_path)
 
     def run(self):
         """Public method to run the entire simulation from setup to reporting."""
@@ -194,11 +194,13 @@ if __name__ == "__main__":
     
     # Define the name for the output CSV file
         OUTPUT_CSV_FILE = 'results/task_domain_results.csv'
+        OUTPUT_PLOT_FILE = 'results/task_domain_forgetting_plot.png'
 
-        # Instantiate the simulator with your desired parameters
+        # Instantiate the simulator with all necessary paths
         simulator = ContinualLearningSimulator(
             data_directory_path=DATA_DIRECTORY,
             output_csv_path=OUTPUT_CSV_FILE,
+            output_plot_path=OUTPUT_PLOT_FILE, 
             training_chunk_size=500,
             eval_chunk_size=200
         )
