@@ -1,6 +1,6 @@
-# Batch, Online and Continual Learning Evaluation
+# Batch, Continual and Online Learning Evaluation
 
-This project contains a suite of four distinct experiments for evaluating batch, online and continual machine learning algorithms. All code, dependencies, and data are automatically managed by Docker, allowing you to run everything with a single command.
+This project contains a suite of four distinct experiments for evaluating batch, continual and online machine learning algorithms. All code, dependencies, and data are automatically managed by Docker, allowing you to run everything with a single command.
 
 On the first run, the necessary datasets will be automatically downloaded from a Zenodo repository and prepared for the experiments.
 
