@@ -203,7 +203,7 @@ if __name__ == "__main__":
             if all_results_list:
                 final_combined_df = pd.concat(all_results_list, ignore_index=True)
                 
-                cols_order = ['Dataset', 'Algorithm', 'Precision', 'TPR', 'FPR', 'Avg. Forgetting', 'Std. Forgetting']
+                cols_order = ['Dataset', 'Algorithm', 'Precision', 'TPR', 'FPR', 'Forgetting', 'Deviation']
                 final_combined_df = final_combined_df[cols_order]
 
                 print("\n" + "="*80)
