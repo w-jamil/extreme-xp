@@ -1,53 +1,62 @@
 import requests
 import zipfile
 import os
-import io
+import shutil
+import time
 
 def prepare_data_from_zenodo(zenodo_archive_url, target_dir):
     """
-    Checks for data locally; if not found, downloads a zip archive from Zenodo,
-    finds all .parquet files within it (regardless of sub-directory), and
-    extracts them directly into the target directory.
-
-    Args:
-        zenodo_archive_url (str): The direct URL to the .zip archive on Zenodo.
-        target_dir (str): The local directory to check for/extract data into (e.g., 'cyber/').
-
-    Returns:
-        bool: True if data is ready, False otherwise.
+    Handles the entire data acquisition process from Zenodo with a highly robust,
+    on-disk streaming download to prevent memory and network timeout issues.
     """
-    # Check if the target directory already exists and has .parquet files
     if os.path.exists(target_dir) and any(f.endswith('.parquet') for f in os.listdir(target_dir)):
         print(f"--> Data found locally in '{target_dir}'. Skipping download.")
         return True
 
-    print(f"--> Local data not found. Starting download from Zenodo")
+    print(f"--> Local data not found. Preparing to download from Zenodo...")
     print(f"    URL: {zenodo_archive_url}")
 
-    try:
-        # Download the file content into memory
-        response = requests.get(zenodo_archive_url, stream=True)
-        response.raise_for_status()
+    # Use a temporary file to save the download stream
+    temp_zip_path = 'temp_download.zip'
 
-        print("--> Download complete. Unzipping relevant files from archive...")
+    try:
+        # --- START OF THE ROBUST DOWNLOAD FIX ---
         
-        # Create the target directory if it doesn't exist
+        # Download the file in chunks and save directly to disk
+        with requests.get(zenodo_archive_url, stream=True) as r:
+            r.raise_for_status()
+            total_size = int(r.headers.get('content-length', 0))
+            downloaded_size = 0
+            
+            print(f"--> Connection established. Total file size: {total_size / 1024**2:.2f} MB")
+            print("--> Downloading data to temporary file...")
+
+            with open(temp_zip_path, 'wb') as f:
+                start_time = time.time()
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+                    downloaded_size += len(chunk)
+                    
+                    # Optional: Print progress
+                    if time.time() - start_time > 2: # Print every 2 seconds
+                        progress = (downloaded_size / total_size) * 100 if total_size > 0 else 0
+                        print(f"    Downloaded {downloaded_size / 1024**2:.2f} / {total_size / 1024**2:.2f} MB ({progress:.1f}%)", end='\r')
+                        start_time = time.time()
+        
+        print("\n--> Download complete. Unzipping relevant files from archive...")
+        # --- END OF THE ROBUST DOWNLOAD FIX ---
+        
         os.makedirs(target_dir, exist_ok=True)
         
-        # Open the zip file from the downloaded bytes
-        with zipfile.ZipFile(io.BytesIO(response.content)) as z:
-            # Iterate through all files in the zip archive
+        # Now, open the zip file from the disk
+        with zipfile.ZipFile(temp_zip_path) as z:
             for member in z.infolist():
-                # We only care about files that end in .parquet and are not directories
                 if member.filename.endswith('.parquet') and not member.is_dir():
-                    # Get just the base filename, ignoring any internal folder structure
-                    # e.g., '13787591/Crypto_Desktop.parquet' becomes 'Crypto_Desktop.parquet'
                     base_filename = os.path.basename(member.filename)
                     output_path = os.path.join(target_dir, base_filename)
                     
-                    # Extract the file by reading its content and writing to the new path
                     with z.open(member) as source, open(output_path, 'wb') as target:
-                        target.write(source.read())
+                        shutil.copyfileobj(source, target)
                     
                     print(f"    - Extracted: {base_filename}")
         
@@ -55,11 +64,16 @@ def prepare_data_from_zenodo(zenodo_archive_url, target_dir):
         return True
 
     except requests.exceptions.RequestException as e:
-        print(f"ERROR: Failed to download data. Please check the URL and your internet connection. Details: {e}")
+        print(f"\nERROR: A network error occurred. Please check the URL and your internet connection. Details: {e}")
         return False
     except zipfile.BadZipFile:
-        print("ERROR: Downloaded file is not a valid zip archive.")
+        print("\nERROR: The downloaded file is not a valid zip archive. It may be incomplete.")
         return False
     except Exception as e:
-        print(f"An unexpected error occurred during data preparation: {e}")
+        print(f"\nAn unexpected error occurred during data preparation: {e}")
         return False
+    finally:
+        # --- CLEANUP: Always remove the temporary zip file ---
+        if os.path.exists(temp_zip_path):
+            os.remove(temp_zip_path)
+            print("--> Temporary download file cleaned up.")
