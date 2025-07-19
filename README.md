@@ -45,8 +45,15 @@ cd /Users/youruser/Downloads/master-experiment-suite
 Execute the following command in your terminal. This will automatically build the environment, download data (if needed), and run all four experiments in sequence.
 
 ```bash
-docker compose up --build
+./run_all_experiments.sh
 ```
+
+or run the following for usual:
+
+```bash
+docker compose up --build 
+```
+
 
 > **What to Expect:** The first time you run this command, it will be slow as it needs to download the Python environment and the large dataset archives. You will see a lot of text scrolling in your terminal as each experiment runs. This is normal. Subsequent runs will be faster (task_cl experiment requires time) as all data and dependencies will be stored locally.
 

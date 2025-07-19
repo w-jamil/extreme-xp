@@ -16,7 +16,7 @@ docker compose up --build --exit-code-from task-domain-cl-experiment task-domain
 
 echo ""
 echo "======================================================"
-echo "Starting Experiment 3: Online (Correct Scaling)"
+echo "Starting Experiment 3: Online"
 echo "======================================================"
 docker compose up --build --exit-code-from online-experiment online-experiment
 
