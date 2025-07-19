@@ -20,7 +20,7 @@ Follow these steps exactly to run the full suite.
 
 ### Step 1: Download and Unzip the Project
 
-Download the project as a single ZIP file and unzip it into a location on your computer. This will create a main project folder containing all the necessary files. **You do not need to download or place any data files manually.**
+Download the project as a single ZIP file and unzip it into a location on your computer. This will create a main project folder containing all the necessary files. **You do not need to download or place any data files manually.** This project includes a script that runs all four experiments **sequentially** to prevent memory overload issues.
 
 ### Step 2: Open a Terminal
 
@@ -45,7 +45,7 @@ cd /Users/youruser/Downloads/master-experiment-suite
 Execute the following command in your terminal. This will automatically build the environment, download data (if needed), and run all four experiments in sequence.
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 > **What to Expect:** The first time you run this command, it will be slow as it needs to download the Python environment and the large dataset archives. You will see a lot of text scrolling in your terminal as each experiment runs. This is normal. Subsequent runs will be faster (task_cl experiment requires time) as all data and dependencies will be stored locally.
@@ -56,7 +56,7 @@ Once the command has finished, the output CSV files containing the results will 
 
 -   Look in **`task_cl/results/`** for `tacl_results.csv`.
 -   Look in **`task_domain_cl/results/`** for `task_domain_results.csv`.
--   Look in **`online/results/`** for `online_evaluation_results.csv`.
+-   Look in **`online/results/`** for `online_results.csv`.
 -   Look in **`batch_learning/results/`** for `batch_learning_results.csv`.
 
 You can now open these files with Excel, Google Sheets, or any other spreadsheet software to analyze the results.
