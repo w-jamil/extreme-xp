@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # --- Service to run the Task-CL Experiment ---
   task-cl-experiment:
