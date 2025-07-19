@@ -33,3 +33,13 @@ services:
       - ./online/results:/app/results
     environment:
       - MPLBACKEND=Agg
+
+  batch-learning-experiment:
+    build:
+      context: ./batch
+    command: python batch_sim.py
+    volumes:
+      - ./batch/cyber:/app/cyber
+      - ./batch/results:/app/results
+    environment:
+      - MPLBACKEND=Agg
