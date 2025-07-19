@@ -1,6 +1,6 @@
 # Batch, Continual & Online Learning Evaluation
 
-This project contains three distinct experiments for evaluating online machine learning algorithms: Task-CL, Task-Domain-CL, and a pure Online evaluation. All experiments can be run automatically with a single command using Docker.
+This project contains experiments for evaluating machine learning algorithms: Batch, Task-CL, Task-Domain-CL, and a pure Online evaluation. All experiments can be run automatically with a single command using Docker.
 
 ## Prerequisites
 
@@ -14,11 +14,12 @@ Download the project as a single ZIP file and unzip it into a folder on your com
 
 **Step 2: Place Your Data Files**
 
-This project contains three experiment folders. You must place the correct `.parquet` data files inside the `cyber/` sub-directory of each one:
+This project contains experiment folders. You must place the correct `.parquet` data files inside the `cyber/` sub-directory of each one:
 
 -   `task_cl/cyber/`
 -   `task_domain_cl/cyber/`
 -   `online/cyber/`
+-   `batch/cyber/`
 
 Place the relevant datasets for each experiment into its corresponding folder.
 
@@ -44,7 +45,7 @@ Execute the following command. This will automatically build the environment and
 docker-compose up --build
 ```
 
-You will see output from the `tacl_sim.py`, `task_domain_sim.py`, and `online.py` scripts in your terminal. Wait for the command to finish completely.
+You will see output from the `batch_sim.py`,`tacl_sim.py`, `task_domain_sim.py`, and `online.py` scripts in your terminal. Wait for the command to finish completely.
 
 ## Finding the Results
 
