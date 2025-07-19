@@ -16,18 +16,14 @@ class ContinualLearningSimulator:
     A class to encapsulate the entire continual learning simulation, making it
     configurable and easy to run.
     """
-    def __init__(self, data_directory_path, output_csv_path, training_chunk_size=500, eval_chunk_size=200):
+    def __init__(self, data_directory_path, output_csv_path, output_plot_path, training_chunk_size=500, eval_chunk_size=200):
         """
         Initializes the simulator with configuration parameters.
-
-        Args:
-            data_directory_path (str): The path to the directory containing .parquet task files.
-            output_csv_path (str): The file path to save the final results CSV.
-            training_chunk_size (int): The number of samples to train on in each round.
-            eval_chunk_size (int): The number of samples to use for evaluation.
+        (Corrected to accept output_plot_path)
         """
         self.data_directory_path = data_directory_path
-        self.output_csv_path = output_csv_path # <-- ADDED: Path for the output file
+        self.output_csv_path = output_csv_path
+        self.output_plot_path = output_plot_path 
         self.training_chunk_size = training_chunk_size
         self.eval_chunk_size = eval_chunk_size
         
