@@ -1,4 +1,4 @@
-# Batch, Continual & Onlin Learning Evaluation Suite
+# Batch, Continual & Online Learning Evaluation
 
 This project contains three distinct experiments for evaluating online machine learning algorithms: Task-CL, Task-Domain-CL, and a pure Online evaluation. All experiments can be run automatically with a single command using Docker.
 
