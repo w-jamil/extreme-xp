@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  # --- Service to run the Task-CL Experiment ---
+  task-cl-experiment:
+    build:
+      context: ./task_cl
+    command: python tacl_sim.py
+    volumes:
+      - ./task_cl/cyber:/app/cyber
+      - ./task_cl/results:/app/results
+    environment:
+      - MPLBACKEND=Agg
+
+  # --- Service to run the Task-Domain-CL Experiment ---
+  task-domain-cl-experiment:
+    build:
+      context: ./task_domain_cl
+    command: python task_domain_sim.py
+    volumes:
+      - ./task_domain_cl/cyber:/app/cyber
+      - ./task_domain_cl/results:/app/results
+    environment:
+      - MPLBACKEND=Agg
+
+  # --- Service to run the Online (Correct Scaling) Experiment ---
+  online-experiment:
+    build:
+      context: ./online
+    command: python online.py
+    volumes:
+      - ./online/cyber:/app/cyber
+      - ./online/results:/app/results
+    environment:
+      - MPLBACKEND=Agg
