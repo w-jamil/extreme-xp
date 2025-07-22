@@ -45,6 +45,7 @@ cd /Users/youruser/Downloads/master-experiment-suite
 Execute the following command in your terminal. This will automatically build the environment, download data (if needed), and run all four experiments in sequence.
 
 ```bash
+chmod +x run_all_experiments.sh
 ./run_all_experiments.sh
 ```
 
