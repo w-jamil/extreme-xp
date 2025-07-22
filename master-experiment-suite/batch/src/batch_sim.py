@@ -273,6 +273,8 @@ if __name__ == "__main__":
     DATA_DIRECTORY = 'cyber/'
     OUTPUT_CSV_FILE = 'results/batch_learning_results.csv'
     TRAIN_TEST_SPLIT_RATIO = 0.6
+    # --- NEW: ADD EPOCHS PARAMETER FOR BATCH TRAINING ---
+    EPOCHS = 5
 
     # --- 1. PREPARE DATA ---
     data_ready = prepare_data_from_zenodo(ZENODO_ARCHIVE_URL, DATA_DIRECTORY)
@@ -283,57 +285,58 @@ if __name__ == "__main__":
         all_data_files = sorted(glob.glob(search_path))
 
         if not all_data_files:
-            print(f"FATAL: No .parquet files found in '{DATA_DIRECTORY}' even after download attempt.")
+            print(f"FATAL: No .parquet files found in '{DATA_DIRECTORY}'.")
         else:
             print(f"Found {len(all_data_files)} datasets. Starting batch learning evaluation...")
             
             all_results = []
             
-            # Loop through each dataset file
             for i, file_path in enumerate(all_data_files):
                 dataset_name = os.path.basename(file_path).replace('.parquet', '')
                 print("\n" + f"--- Processing Dataset {i+1}/{len(all_data_files)}: {dataset_name} ---")
                 
-                # Load the raw data for the current file
                 X_raw, y_raw = load_data_for_batch(file_path)
                 
-                if X_raw is None or len(X_raw) < 20: # Min samples for a meaningful split
+                if X_raw is None or len(X_raw) < 20:
                     print(f"  - Skipping, not enough data.")
                     continue
 
-                # Scale the entire dataset *before* splitting
-                scaler = StandardScaler()
-                X_scaled = scaler.fit_transform(X_raw)
-
-                # Split into train/test sets
+                X_scaled = StandardScaler().fit_transform(X_raw)
                 split_idx = int(TRAIN_TEST_SPLIT_RATIO * len(X_scaled))
                 X_train, X_test = X_scaled[:split_idx], X_scaled[split_idx:]
                 y_train, y_test = y_raw[:split_idx], y_raw[split_idx:]
 
-                if len(X_test) == 0:
-                    print(f"  - Skipping, test set is empty after split.")
+                if len(X_test) == 0 or len(X_train) == 0:
+                    print(f"  - Skipping, train or test set is empty.")
                     continue
 
                 print(f"  - Train size: {len(X_train)}, Test size: {len(X_test)}")
 
-                # Initialize a fresh set of models for this dataset
+                # Initialize models for this dataset
+                n_features = X_train.shape[1]
                 models_to_run = {
-                    "PassiveAggressive": PassiveAggressive(n_features=X_train.shape[1]),
-                    "Perceptron": Perceptron(n_features=X_train.shape[1]),
-                    "GradientLearning": GradientLearning(n_features=X_train.shape[1]),
-                    "AdaRDA": AdaRDA(n_features=X_train.shape[1], lambda_param=1, eta_param=1, delta_param=1),
-                    "RDA": RDA(n_features=X_train.shape[1], lambda_param=1, gamma_param=1),
-                    "SCW": SCW(n_features=X_train.shape[1], C=1, eta=0.5),
-                    "AROW": AROW(n_features=X_train.shape[1], r=1)
+                    "PassiveAggressive": PassiveAggressive(n_features=n_features),
+                    "Perceptron": Perceptron(n_features=n_features),
+                    "GradientLearning": GradientLearning(n_features=n_features),
+                    "AROW": AROW(n_features=n_features, r=1.0),
+                    "RDA": RDA(n_features=n_features, lambda_param=0.01, gamma_param=1.0),
+                    "SCW": SCW(n_features=n_features, C=0.1, eta=0.95),
+                    "AdaRDA": AdaRDA(n_features=n_features, lambda_param=0.01, eta_param=0.1, delta_param=1.0)
                 }
 
-                # Train and evaluate each model
                 for algo_name, model in models_to_run.items():
-                    # Train the model on the entire training set
-                    for k in range(len(X_train)):
-                        model.partial_fit(X_train[k], y_train[k])
+                    print(f"  - Training {algo_name} for {EPOCHS} epochs...")
                     
-                    # Evaluate the model on the training set
+                    # --- FIX: WRAP THE TRAINING IN AN EPOCHS LOOP FOR BATCH LEARNING ---
+                    for epoch in range(EPOCHS):
+                        # Optional: Add shuffling here if desired for non-time-series data
+                        # permutation = np.random.permutation(len(X_train))
+                        # for k in permutation:
+                        for k in range(len(X_train)): # Current: sequential processing per epoch
+                            model.partial_fit(X_train[k], y_train[k])
+                    # --- END OF FIX ---
+                    
+                    # Evaluate on the training set after all epochs are complete
                     y_preds_train = [model.predict(x) for x in X_train]
                     train_precision, train_tpr, train_fpr = calculate_class1_metrics(y_train, y_preds_train)
                     
@@ -341,29 +344,18 @@ if __name__ == "__main__":
                     y_preds_test = [model.predict(x) for x in X_test]
                     test_precision, test_tpr, test_fpr = calculate_class1_metrics(y_test, y_preds_test)
                     
-                    # Store the results
                     all_results.append({
-                        'Dataset': dataset_name,
-                        'Algorithm': algo_name,
-                        'Train_Precision': train_precision,
-                        'Train_TPR': train_tpr,
-                        'Train_FPR': train_fpr,
-                        'Test_Precision': test_precision,
-                        'Test_TPR': test_tpr,
-                        'Test_FPR': test_fpr
+                        'Dataset': dataset_name, 'Algorithm': algo_name,
+                        'Train_Precision': train_precision, 'Train_TPR': train_tpr, 'Train_FPR': train_fpr,
+                        'Test_Precision': test_precision, 'Test_TPR': test_tpr, 'Test_FPR': test_fpr
                     })
             
-            # --- 3. COMPILE AND SAVE RESULTS ---
+            # --- Compile and save results ---
             if all_results:
                 final_df = pd.DataFrame(all_results)
-                
-                # Reorder columns for better readability
-                cols_order = ['Dataset', 'Algorithm', 
-                              'Train_Precision', 'Test_Precision',
-                              'Train_TPR', 'Test_TPR',
-                              'Train_FPR', 'Test_FPR']
+                cols_order = ['Dataset', 'Algorithm', 'Train_Precision', 'Test_Precision',
+                              'Train_TPR', 'Test_TPR', 'Train_FPR', 'Test_FPR']
                 final_df = final_df[cols_order]
-
                 print("\n" + "="*80)
                 print("BATCH EVALUATION COMPLETE. FINAL COMBINED RESULTS:")
                 print("="*80)

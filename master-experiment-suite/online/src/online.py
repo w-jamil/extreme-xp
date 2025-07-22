@@ -321,33 +321,43 @@ def calculate_class1_metrics(y_true, y_pred):
 # 3. BATCH EXPERIMENT RUNNER
 # =============================================================================
 
+# =============================================================================
+# 3. BATCH EXPERIMENT RUNNER
+# =============================================================================
+
 if __name__ == "__main__":
     # --- CONFIGURATION ---
     ZENODO_ARCHIVE_URL = 'https://zenodo.org/api/records/13787591/files-archive'
-    DATA_DIRECTORY = 'cyber/'  # This is the target folder for our data
+    DATA_DIRECTORY = 'cyber/'
     OUTPUT_CSV_FILE = 'results/online_results.csv'
+    
+    # --- Download and prepare data ---
+    # Assuming prepare_data_from_zenodo is defined elsewhere
     data_ready = prepare_data_from_zenodo(ZENODO_ARCHIVE_URL, DATA_DIRECTORY)
 
-
-
     if data_ready:
-    
-        algorithms_to_run = {
-            "PassiveAggressive": AP,
-            "Perceptron": PERCEPT,
-            "GradientLearning": OGL,
-            "AROW": AROW,
-            "RDA": RDA,
-            "SCW": SCW,
-            "AdaRDA": AdaRDA
-        }
         
-        # --- SCRIPT START ---
+        # --- FIX: DEFINE ALGORITHMS WITH THEIR HYPERPARAMETERS USING LAMBDA ---
+        algorithms_to_run = {
+            # Original algorithms (no parameters needed)
+            "PassiveAggressive": lambda X, y: AP(X, y),
+            "Perceptron": lambda X, y: PERCEPT(X, y),
+            "GradientLearning": lambda X, y: OGL(X, y),
+            
+            # New algorithms with default hyperparameters
+            # The lambda function captures the parameters and passes them along.
+            "AROW": lambda X, y: AROW(X, y, r=1.0),
+            "RDA": lambda X, y: RDA(X, y, lambda_param=0.01, gamma_param=1.0),
+            "SCW": lambda X, y: SCW(X, y, C=0.1, eta=0.95),
+            "AdaRDA": lambda X, y: AdaRDA(X, y, lambda_param=0.01, eta_param=0.1, delta_param=1.0)
+        }
+        # --- END OF FIX ---
+        
         search_path = os.path.join(DATA_DIRECTORY, '*.parquet')
         all_data_files = sorted(glob.glob(search_path))
 
         if not all_data_files:
-            print(f"FATAL: No .parquet files found in '{DATA_DIRECTORY}'. Please check the path.")
+            print(f"FATAL: No .parquet files found in '{DATA_DIRECTORY}'.")
         else:
             print(f"Found {len(all_data_files)} datasets. Starting batch evaluation...")
             
@@ -359,6 +369,8 @@ if __name__ == "__main__":
                 print(f"Processing Dataset {i+1}/{len(all_data_files)}: {dataset_name}")
                 print("="*60)
                 
+                # --- FIX: USE A DIFFERENT FUNCTION NAME FOR DATA LOADING ---
+                # Changed load_and_process_data to avoid conflicts if it was defined elsewhere
                 X, y_true = load_and_process_data(file_path)
                 
                 if X is None or y_true is None or len(X) <= 1:
@@ -368,28 +380,31 @@ if __name__ == "__main__":
                 for algo_name, algo_func in algorithms_to_run.items():
                     print(f"  - Running algorithm: {algo_name}...")
                     
-                    # --- THIS IS THE CORE LOGIC FROM YOUR EXAMPLE ---
-                    
-                    # 1. Call the function to get the full stream of predictions
-                    y_pred_stream, _ = algo_func(X, y_true)
-                    
-                    # 2. Slice both y_true and y_pred to exclude the first sample
-                    y_true_eval = y_true[1:]
-                    y_pred_eval = y_pred_stream[1:]
-                    
-                    # 3. Calculate metrics on the sliced data
-                    precision, tpr, fpr = calculate_class1_metrics(y_true_eval, y_pred_eval)
-                    
-                    # --------------------------------------------------
-                    
-                    all_results.append({
-                        'Dataset': dataset_name,
-                        'Algorithm': algo_name,
-                        'Precision': precision,
-                        'TPR': tpr,
-                        'FPR': fpr
-                    })
-                    
+                    try:
+                        # Now this call works for all functions, as the lambda handles the parameters
+                        y_pred_stream, _ = algo_func(X, y_true)
+                        
+                        # Your evaluation logic is correct, slice to align predictions with true labels
+                        y_true_eval = y_true[1:]
+                        y_pred_eval = y_pred_stream[:-1] # Correct slicing for prequential evaluation
+                        
+                        precision, tpr, fpr = calculate_class1_metrics(y_true_eval, y_pred_eval)
+                        
+                        all_results.append({
+                            'Dataset': dataset_name,
+                            'Algorithm': algo_name,
+                            'Precision': precision,
+                            'TPR': tpr,
+                            'FPR': fpr
+                        })
+                    except Exception as e:
+                        print(f"    ERROR running {algo_name} on {dataset_name}: {e}")
+                        # Optionally, store a failed result
+                        all_results.append({
+                            'Dataset': dataset_name, 'Algorithm': algo_name,
+                            'Precision': np.nan, 'TPR': np.nan, 'FPR': np.nan
+                        })
+
             if all_results:
                 final_df = pd.DataFrame(all_results)
                 
@@ -399,9 +414,10 @@ if __name__ == "__main__":
                 print(final_df.round(4).to_string())
                 
                 try:
+                    os.makedirs(os.path.dirname(OUTPUT_CSV_FILE), exist_ok=True)
                     final_df.to_csv(OUTPUT_CSV_FILE, index=False, float_format='%.4f')
                     print(f"\nSUCCESS: All combined results saved to '{OUTPUT_CSV_FILE}'")
                 except Exception as e:
                     print(f"\nERROR: Could not save results to CSV. Reason: {e}")
             else:
-                print("\nNo simulations were completed successfully. No output file generated.")
+                print("\nNo simulations were completed successfully.")

@@ -32,31 +32,42 @@ class OnlineStreamSimulator:
         self.prediction_history = {}
         # Stores the calculated forgetting score F_k(j) at each step j
         self.forgetting_history = {}
-
+        
     def _setup_environment(self):
         """Private method to load data and initialize models."""
         preprocessor = DataPreprocessor(file_path=self.file_path)
         self.X, self.y = preprocessor.process()
         
-        # The simulation needs at least W samples to create the first training window
         if self.X is None or len(self.X) <= self.window_size:
-            print(f"  - Warning: Not enough data in '{os.path.basename(self.file_path)}' to run simulation (needs > {self.window_size} samples). Skipping.")
+            print(f"  - Warning: Not enough data in '{os.path.basename(self.file_path)}' to run simulation. Skipping.")
             return False
         
         n_features = self.X.shape[1]
+        
+        # --- FIX: PROVIDE THE CORRECT PARAMETERS FOR EACH ALGORITHM ---
         self.models = {
             "PA": PassiveAggressive(n_features=n_features),
             "Perceptron": Perceptron(n_features=n_features),
             "GL": GradientLearning(n_features=n_features),
-            "AROW": AROW(n_features=n_features,r=1.0),
-            "RDA": RDA(n_features=n_features, r=1.0),
-            "SCW": SCW(n_features=n_features, C=1, eta=0.5),
-            "AdaRDA": AdaRDA(n_features=n_features, lambda_param=1, eta_param=1, delta_param=1)
+            
+            # AROW expects 'r'
+            "AROW": AROW(n_features=n_features, r=1.0),
+            
+            # RDA expects 'lambda_param' and 'gamma_param'
+            "RDA": RDA(n_features=n_features, lambda_param=0.01, gamma_param=1.0),
+            
+            # SCW expects 'C' and 'eta'
+            "SCW": SCW(n_features=n_features, C=0.1, eta=0.95),
+            
+            # AdaRDA expects 'lambda_param', 'eta_param', and 'delta_param'
+            "AdaRDA": AdaRDA(n_features=n_features, lambda_param=0.01, eta_param=0.1, delta_param=1.0)
         }
+        # --- END OF FIX ---
+        
         self.prediction_history = {name: [] for name in self.models.keys()}
         self.forgetting_history = {name: [] for name in self.models.keys()}
         return True
-
+    
     def _run_learning_loop(self):
         """
         Private method to run the main continual learning loop, calculating

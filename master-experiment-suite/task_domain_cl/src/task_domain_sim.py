@@ -30,7 +30,6 @@ class ContinualLearningSimulator:
         self.algorithms = {}
         self.performance_history = {}
         self.forgetting_history = {}
-
     def _setup_environment(self):
         """Private method to load data, preprocess it, and initialize models."""
         processor = TaskGenerator(directory_path=self.data_directory_path)
@@ -50,15 +49,26 @@ class ContinualLearningSimulator:
 
         print("\nInitializing persistent algorithms...")
         n_features = list(self.tasks_processed.values())[0]["X"].shape[1]
+        
+        # --- FIX: PROVIDE THE CORRECT PARAMETERS FOR EACH ALGORITHM ---
         self.algorithms = {
             "PA": PassiveAggressive(n_features=n_features),
             "Perceptron": Perceptron(n_features=n_features),
             "GL": GradientLearning(n_features=n_features),
-            "AROW": AROW(n_features=n_features,r=1.0),
-            "RDA": RDA(n_features=n_features, r=1.0),
-            "SCW": SCW(n_features=n_features, C=1, eta=0.5),
-            "AdaRDA": AdaRDA(n_features=n_features, lambda_param=1, eta_param=1, delta_param=1)
+            
+            # AROW expects 'r'
+            "AROW": AROW(n_features=n_features, r=1.0),
+            
+            # RDA expects 'lambda_param' and 'gamma_param'
+            "RDA": RDA(n_features=n_features, lambda_param=0.01, gamma_param=1.0),
+            
+            # SCW expects 'C' and 'eta'
+            "SCW": SCW(n_features=n_features, C=0.1, eta=0.95),
+            
+            # AdaRDA expects 'lambda_param', 'eta_param', and 'delta_param'
+            "AdaRDA": AdaRDA(n_features=n_features, lambda_param=0.01, eta_param=0.1, delta_param=1.0)
         }
+        # --- END OF FIX ---
         
         num_rounds = len(self.task_names)
         self.performance_history = {name: pd.DataFrame(np.nan, index=self.task_names, columns=range(num_rounds)) for name in self.algorithms}
