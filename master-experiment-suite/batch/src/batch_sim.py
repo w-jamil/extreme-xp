@@ -203,25 +203,40 @@ if __name__ == "__main__":
                     for k in range(len(X_train)):
                         model.partial_fit(X_train[k], y_train[k])
                     
+                    # Evaluate the model on the training set
+                    y_preds_train = [model.predict(x) for x in X_train]
+                    train_precision, train_tpr, train_fpr = calculate_class1_metrics(y_train, y_preds_train)
+                    
                     # Evaluate the final model on the unseen test set
-                    y_preds = [model.predict(x) for x in X_test]
-                    precision, tpr, fpr = calculate_class1_metrics(y_test, y_preds)
+                    y_preds_test = [model.predict(x) for x in X_test]
+                    test_precision, test_tpr, test_fpr = calculate_class1_metrics(y_test, y_preds_test)
                     
                     # Store the results
                     all_results.append({
                         'Dataset': dataset_name,
                         'Algorithm': algo_name,
-                        'Precision': precision,
-                        'TPR': tpr,
-                        'FPR': fpr
+                        'Train_Precision': train_precision,
+                        'Train_TPR': train_tpr,
+                        'Train_FPR': train_fpr,
+                        'Test_Precision': test_precision,
+                        'Test_TPR': test_tpr,
+                        'Test_FPR': test_fpr
                     })
             
             # --- 3. COMPILE AND SAVE RESULTS ---
             if all_results:
                 final_df = pd.DataFrame(all_results)
-                print("\n" + "="*60)
+                
+                # Reorder columns for better readability
+                cols_order = ['Dataset', 'Algorithm', 
+                              'Train_Precision', 'Test_Precision',
+                              'Train_TPR', 'Test_TPR',
+                              'Train_FPR', 'Test_FPR']
+                final_df = final_df[cols_order]
+
+                print("\n" + "="*80)
                 print("BATCH EVALUATION COMPLETE. FINAL COMBINED RESULTS:")
-                print("="*60)
+                print("="*80)
                 print(final_df.round(4).to_string())
                 
                 try:
