@@ -4,10 +4,67 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import confusion_matrix
 import os
 import glob
+from scipy.stats import norm
 from data_handler import prepare_data_from_zenodo
 # =============================================================================
 # 1. ALGORITHM FUNCTIONS (Copied exactly as provided)
 # =============================================================================
+
+
+def AROW(X, y, r):
+    """
+    Online learning implementation of AROW (Adaptive Regularization of Weight Vectors).
+    Processes one sample at a time and returns the full history of predictions and weights.
+
+    Args:
+        X (array-like): The feature matrix.
+        y (array-like): The labels.
+        r (float): Regularization parameter.
+
+    Returns:
+        tuple: (predictions for each step, weight history for each step).
+    """
+    X_np = np.asarray(X)
+    y_np = np.asarray(y)
+    n_samples, n_features = X_np.shape
+
+    # In AROW, 'u' is the mean vector, which acts as the weights
+    u = np.zeros(n_features)
+    # Sigma is the covariance matrix, representing confidence
+    Sigma = np.identity(n_features)
+    
+    y_pred = np.zeros(n_samples)
+    weight_history = np.zeros((n_samples, n_features))
+
+    for i in range(n_samples):
+        x = X_np[i]
+        y_actual = y_np[i]
+        
+        # Prediction for the current step
+        prediction_at_i = np.sign(x.dot(u))
+        y_pred[i] = prediction_at_i if prediction_at_i != 0 else 1
+        
+        # Calculate hinge loss and confidence
+        lt = max(0, 1 - y_actual * x.dot(u))
+        vt = x.T.dot(Sigma).dot(x)
+        
+        # Only update if there is a loss
+        if lt > 0:
+            # Note: The R code's 'stepw' is a specific variant. AROW's standard alpha is lt / (vt + r)
+            # We will faithfully translate the provided R code's logic.
+            # alpha_t = min(1/(2*r), lt/vt) if vt > 0 else 0 
+            # The standard AROW update is often more stable:
+            alpha_t = lt / (vt + r) if (vt + r) > 0 else 0.0
+
+            beta_t = 1 / (vt + r) if (vt + r) > 0 else 0.0
+           
+            # Update mean vector (weights) and covariance matrix
+            u += alpha_t * y_actual * Sigma.dot(x)
+            Sigma -= beta_t * Sigma.dot(np.outer(x, x)).dot(Sigma)
+
+        weight_history[i, :] = u
+        
+    return y_pred, weight_history
 
 def AP(X, y):
     """Passive-Aggressive function that returns a stream of predictions."""
@@ -70,6 +127,159 @@ def OGL(X, y):
         
     return y_pred, weight_history
 
+def RDA(X, y, lambda_param=1, gamma_param=1):
+    """
+    Regularized Dual Averaging for L1 regularization.
+    """
+    X_np = np.asarray(X)
+    y_np = np.asarray(y)
+    n_samples, n_features = X_np.shape
+
+    w = np.zeros(n_features)
+    g = np.zeros(n_features)  # Averaged gradients
+    
+    y_pred = np.zeros(n_samples)
+    weight_history = np.zeros((n_samples, n_features))
+
+    for i in range(n_samples):
+        t = i + 1 # Time step starts at 1
+        x = X_np[i]
+        y_actual = y_np[i]
+        
+        # Prediction for the current step
+        prediction_at_i = np.sign(x.dot(w))
+        # Store the prediction made at this point in time
+        y_pred[i] = prediction_at_i if prediction_at_i != 0 else 1
+        
+        # Calculate loss and subgradient
+        lt = max(0, 1 - y_actual * x.dot(w))
+        
+        if lt > 0:
+            gt = -y_actual * x
+        else:
+            gt = np.zeros_like(x)
+        
+        # Update averaged gradients
+        g = ((t - 1) / t) * g + (1 / t) * gt
+        
+        # Apply the RDA update rule
+        update_mask = np.abs(g) > lambda_param
+        
+        # Reset weights before applying updates
+        w.fill(0)
+        
+        w[update_mask] = -(np.sqrt(t) / gamma_param) * \
+                          (g[update_mask] - lambda_param * np.sign(g[update_mask]))
+        
+        weight_history[i, :] = w
+        
+    return y_pred, weight_history
+
+def SCW(X, y, C=1, eta=0.5):
+    """
+    Soft Confidence-Weighted learning.
+    """
+    X_np = np.asarray(X)
+    y_np = np.asarray(y)
+    n_samples, n_features = X_np.shape
+
+    # Confidence parameter from N(0,1) corresponding to eta
+    phi = norm.ppf(eta) 
+    
+    u = np.zeros(n_features)      # Mean vector
+    Sigma = np.identity(n_features) # Covariance matrix
+    
+    y_pred = np.zeros(n_samples)
+    weight_history = np.zeros((n_samples, n_features))
+
+    for i in range(n_samples):
+        x = X_np[i]
+        y_actual = y_np[i]
+        
+        # Prediction for the current step
+        prediction_at_i = np.sign(x.dot(u))
+        # Store the prediction made at this point in time
+        y_pred[i] = prediction_at_i if prediction_at_i != 0 else 1
+        
+        # Calculate margin and loss
+        vt = x.T.dot(Sigma).dot(x)
+        mt = y_actual * x.dot(u)
+        lt = max(0, phi * np.sqrt(vt) - mt)
+        
+        if lt > 0:
+            # Solve for alpha_t
+            pa = 1 + (phi**2) / 2
+            xi = 1 + phi**2
+            
+            sqrt_term = max(0, (mt**2 * phi**4 / 4) + (vt * phi**2 * xi))
+            alpha_t = max(0, (1 / (vt * xi)) * (-mt * pa + np.sqrt(sqrt_term)))
+            alpha_t = min(C, alpha_t)
+            
+            # Calculate beta_t
+            sqrt_ut_term = max(0, (alpha_t**2 * vt**2 * phi**2) + (4 * vt))
+            ut = 0.25 * (-alpha_t * vt * phi + np.sqrt(sqrt_ut_term))**2
+            beta_t = (alpha_t * phi) / (np.sqrt(ut) + vt * alpha_t * phi + 1e-8)
+            
+            # Update mean vector and covariance matrix
+            u += alpha_t * y_actual * Sigma.dot(x)
+            Sigma -= beta_t * Sigma.dot(np.outer(x, x)).dot(Sigma)
+
+        # For SCW, the mean vector 'u' acts as the weight vector
+        weight_history[i, :] = u
+        
+    return y_pred, weight_history
+
+def AdaRDA(X, y, lambda_param=1, eta_param=1, delta_param=1):
+    """
+    Adaptive Regularized Dual Averaging.
+    """
+    X_np = np.asarray(X)
+    y_np = np.asarray(y)
+    n_samples, n_features = X_np.shape
+
+    w = np.zeros(n_features)
+    g = np.zeros(n_features)   # Averaged gradients
+    g1t = np.zeros(n_features) # Sum of squared gradients
+
+    y_pred = np.zeros(n_samples)
+    weight_history = np.zeros((n_samples, n_features))
+
+    for i in range(n_samples):
+        t = i + 1 # Time step starts at 1
+        x = X_np[i]
+        y_actual = y_np[i]
+        
+        # Prediction for the current step
+        prediction_at_i = np.sign(x.dot(w))
+        # Store the prediction made at this point in time
+        y_pred[i] = prediction_at_i if prediction_at_i != 0 else 1
+        
+        # Calculate loss and subgradient
+        lt = max(0, 1 - y_actual * x.dot(w))
+        
+        if lt > 0:
+            gt = -y_actual * x
+        else:
+            gt = np.zeros_like(x)
+            
+        # Update averaged and squared gradients
+        g = ((t - 1) / t) * g + (1 / t) * gt
+        g1t += gt**2
+        
+        # Calculate adaptive learning rate components
+        Ht = delta_param + np.sqrt(g1t)
+        
+        # Apply the AdaRDA update rule
+        update_mask = np.abs(g) > lambda_param
+        
+        # Reset weights before applying updates
+        w.fill(0)
+        
+        w[update_mask] = np.sign(-g[update_mask]) * eta_param * t / (Ht[update_mask] + 1e-8)
+        
+        weight_history[i, :] = w
+        
+    return y_pred, weight_history
 # =============================================================================
 # 2. HELPER FUNCTIONS
 # =============================================================================
@@ -125,7 +335,11 @@ if __name__ == "__main__":
         algorithms_to_run = {
             "PassiveAggressive": AP,
             "Perceptron": PERCEPT,
-            "GradientLearning": OGL
+            "GradientLearning": OGL,
+            "AROW": AROW,
+            "RDA": RDA,
+            "SCW": SCW,
+            "AdaRDA": AdaRDA
         }
         
         # --- SCRIPT START ---

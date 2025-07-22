@@ -7,7 +7,7 @@ import copy
 
 # Import our custom modules
 from data_preprocessor import DataPreprocessor
-from algorithms import PassiveAggressive, Perceptron, GradientLearning
+from algorithms import PassiveAggressive, Perceptron, GradientLearning,AROW,RDA,SCW,AdaRDA
 from metrics import calculate_class1_metrics # We will use our own forgetting logic now
 from data_handler import prepare_data_from_zenodo
 
@@ -45,9 +45,13 @@ class OnlineStreamSimulator:
         
         n_features = self.X.shape[1]
         self.models = {
-            "PassiveAggressive": PassiveAggressive(n_features=n_features),
+            "PA": PassiveAggressive(n_features=n_features),
             "Perceptron": Perceptron(n_features=n_features),
-            "GradientLearning": GradientLearning(n_features=n_features),
+            "GL": GradientLearning(n_features=n_features),
+            "AROW": AROW(n_features=n_features,r=1.0),
+            "RDA": RDA(n_features=n_features, r=1.0),
+            "SCW": SCW(n_features=n_features, C=1, eta=0.5),
+            "AdaRDA": AdaRDA(n_features=n_features, lambda_param=1, eta_param=1, delta_param=1)
         }
         self.prediction_history = {name: [] for name in self.models.keys()}
         self.forgetting_history = {name: [] for name in self.models.keys()}

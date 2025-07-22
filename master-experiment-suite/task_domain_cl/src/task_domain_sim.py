@@ -4,7 +4,7 @@ from sklearn.preprocessing import StandardScaler
 
 # Import our custom modules
 from data_processor import TaskGenerator
-from algorithms import PassiveAggressive, Perceptron, GradientLearning
+from algorithms import PassiveAggressive, Perceptron, GradientLearning,AROW,RDA,SCW,AdaRDA
 from evaluation import evaluate_on_chunk, calculate_final_metrics, plot_forgetting_over_time
 from data_handler import prepare_data_from_zenodo
 
@@ -51,9 +51,13 @@ class ContinualLearningSimulator:
         print("\nInitializing persistent algorithms...")
         n_features = list(self.tasks_processed.values())[0]["X"].shape[1]
         self.algorithms = {
-            "PassiveAggressive": PassiveAggressive(n_features=n_features),
+            "PA": PassiveAggressive(n_features=n_features),
             "Perceptron": Perceptron(n_features=n_features),
-            "GradientLearning": GradientLearning(n_features=n_features)
+            "GL": GradientLearning(n_features=n_features),
+            "AROW": AROW(n_features=n_features,r=1.0),
+            "RDA": RDA(n_features=n_features, r=1.0),
+            "SCW": SCW(n_features=n_features, C=1, eta=0.5),
+            "AdaRDA": AdaRDA(n_features=n_features, lambda_param=1, eta_param=1, delta_param=1)
         }
         
         num_rounds = len(self.task_names)
@@ -182,13 +186,13 @@ if __name__ == "__main__":
 
     data_ready = prepare_data_from_zenodo(ZENODO_ARCHIVE_URL, DATA_DIRECTORY)
 
+    # Define the name for the output CSV file
 
+    OUTPUT_CSV_FILE = 'results/task_domain_results.csv'
+    OUTPUT_PLOT_FILE = 'results/task_domain_forgetting_plot.png'
 
     if data_ready:
     
-    # Define the name for the output CSV file
-        OUTPUT_CSV_FILE = 'results/task_domain_results.csv'
-        OUTPUT_PLOT_FILE = 'results/task_domain_forgetting_plot.png'
 
         # Instantiate the simulator with all necessary paths
         simulator = ContinualLearningSimulator(
