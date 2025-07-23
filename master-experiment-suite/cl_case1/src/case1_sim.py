@@ -199,8 +199,8 @@ if __name__ == "__main__":
 
     # Define the name for the output CSV file
 
-    OUTPUT_CSV_FILE = 'results/task_domain_results.csv'
-    OUTPUT_PLOT_FILE = 'results/task_domain_forgetting_plot.png'
+    OUTPUT_CSV_FILE = 'results/cl_case1_results.csv'
+    OUTPUT_PLOT_FILE = 'results/cl_case1_forgetting_plot.png'
 
     if data_ready:
     

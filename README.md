@@ -56,14 +56,14 @@ docker compose up --build
 ```
 
 
-> **What to Expect:** The first time you run this command, it will be slow as it needs to download the Python environment and the large dataset archives. You will see a lot of text scrolling in your terminal as each experiment runs. This is normal. Subsequent runs will be faster (task_cl experiment requires time) as all data and dependencies will be stored locally.
+> **What to Expect:** The first time you run this command, it will be slow as it needs to download the Python environment and the large dataset archives. You will see a lot of text scrolling in your terminal as each experiment runs. This is normal. Subsequent runs will be faster (cl_case2 experiment requires time) as all data and dependencies will be stored locally.
 
 ## 3. Finding the Results
 
 Once the command has finished, the output CSV files containing the results will be located inside the `results/` folder of each corresponding experiment directory.
 
--   Look in **`task_cl/results/`** for `tacl_results.csv`.
--   Look in **`task_domain_cl/results/`** for `task_domain_results.csv`.
+-   Look in **`cl_case1/results/`** for `case1_results.csv`.
+-   Look in **`cl_case2/results/`** for `case2_results.csv`.
 -   Look in **`online/results/`** for `online_results.csv`.
 -   Look in **`batch_learning/results/`** for `batch_learning_results.csv`.
 

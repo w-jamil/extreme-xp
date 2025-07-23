@@ -184,8 +184,8 @@ if __name__ == "__main__":
 
 
     if data_ready:
-        
-        OUTPUT_CSV_FILE = 'results/tacl_results.csv'
+
+        OUTPUT_CSV_FILE = 'results/cl_case2_results.csv'
         WINDOW_SIZE = 250 # Corresponds to W in the formula
 
         # --- BATCH EXECUTION SCRIPT ---

@@ -4,15 +4,15 @@
 # It ensures that one experiment finishes before the next one starts.
 
 echo "======================================================"
-echo "Starting Experiment 1: Task-CL"
+echo "Starting Experiment 1: CL CASE 2"
 echo "======================================================"
-docker compose up --build --exit-code-from task-cl-experiment task-cl-experiment
+docker compose up --build --exit-code-from cl_case2-experiment cl_case2-experiment
 
 echo ""
 echo "======================================================"
-echo "Starting Experiment 2: Task-Domain-CL"
+echo "Starting Experiment 2: CL CASE 1"
 echo "======================================================"
-docker compose up --build --exit-code-from task-domain-cl-experiment task-domain-cl-experiment
+docker compose up --build --exit-code-from cl_case1-experiment cl_case1-experiment
 
 echo ""
 echo "======================================================"
