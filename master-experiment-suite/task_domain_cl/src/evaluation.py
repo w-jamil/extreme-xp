@@ -23,8 +23,9 @@ def calculate_final_metrics(algo, X_eval, y_eval):
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
     fnr = fn / (fn + tp) if (fn + tp) > 0 else 0.0
-    
-    return precision, recall, fnr
+    fpr = fp / (fp + tn) if (fp + tn) > 0 else 0.0
+
+    return precision, recall, fnr, fpr
 
 def plot_forgetting_over_time(forgetting_history_dict, task_names_list, output_path):
     """

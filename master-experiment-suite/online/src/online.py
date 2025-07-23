@@ -312,10 +312,11 @@ def calculate_class1_metrics(y_true, y_pred):
         return np.nan, np.nan, np.nan
 
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-    tpr = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    fnr = fn / (fn + tp) if (fn + tp) > 0 else 0.0
     fpr = fp / (fp + tn) if (fp + tn) > 0 else 0.0
-    
-    return precision, tpr, fpr
+
+    return precision, recall, fnr, fpr
 
 # =============================================================================
 # 3. BATCH EXPERIMENT RUNNER
@@ -340,9 +341,9 @@ if __name__ == "__main__":
         # --- FIX: DEFINE ALGORITHMS WITH THEIR HYPERPARAMETERS USING LAMBDA ---
         algorithms_to_run = {
             # Original algorithms (no parameters needed)
-            "PassiveAggressive": lambda X, y: AP(X, y),
+            "PA": lambda X, y: AP(X, y),
             "Perceptron": lambda X, y: PERCEPT(X, y),
-            "GradientLearning": lambda X, y: OGL(X, y),
+            "GLC": lambda X, y: OGL(X, y),
             
             # New algorithms with default hyperparameters
             # The lambda function captures the parameters and passes them along.
@@ -387,14 +388,15 @@ if __name__ == "__main__":
                         # Your evaluation logic is correct, slice to align predictions with true labels
                         y_true_eval = y_true[1:]
                         y_pred_eval = y_pred_stream[:-1] # Correct slicing for prequential evaluation
-                        
-                        precision, tpr, fpr = calculate_class1_metrics(y_true_eval, y_pred_eval)
-                        
+
+                        precision, recall, fnr, fpr = calculate_class1_metrics(y_true_eval, y_pred_eval)
+
                         all_results.append({
                             'Dataset': dataset_name,
                             'Algorithm': algo_name,
                             'Precision': precision,
-                            'TPR': tpr,
+                            'Recall': recall,
+                            'FNR': fnr,
                             'FPR': fpr
                         })
                     except Exception as e:

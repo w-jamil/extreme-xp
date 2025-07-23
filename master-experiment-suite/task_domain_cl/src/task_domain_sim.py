@@ -133,20 +133,21 @@ class ContinualLearningSimulator:
         print("="*70)
 
         # --- 1. Calculate Final Performance Metrics (Precision, Recall, FNR) ---
-        final_metrics_summary = {'Algorithm': [], 'Task': [], 'Precision': [], 'Recall': [], 'FNR': []}
+        final_metrics_summary = {'Algorithm': [], 'Task': [], 'Precision': [], 'Recall': [], 'FNR': [], 'FPR': []}
         print("Calculating final performance metrics on all tasks...")
         for task_name, task_data in self.tasks_processed.items():
             X_full, y_full = task_data["X"], task_data["y"]
             for algo_name, algo in self.algorithms.items():
-                precision, recall, fnr = calculate_final_metrics(algo, X_full, y_full)
+                precision, recall, fnr, fpr = calculate_final_metrics(algo, X_full, y_full)
                 final_metrics_summary['Algorithm'].append(algo_name)
                 final_metrics_summary['Task'].append(task_name)
                 final_metrics_summary['Precision'].append(precision)
                 final_metrics_summary['Recall'].append(recall)
                 final_metrics_summary['FNR'].append(fnr)
+                final_metrics_summary['FPR'].append(fpr)
 
         final_summary_df = pd.DataFrame(final_metrics_summary)
-        
+ 
         # --- 2. Calculate Overall Forgetting and Add to DataFrame ---
         overall_forgetting_scores = {}
         for algo_name in self.algorithms:

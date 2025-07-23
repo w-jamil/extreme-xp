@@ -72,14 +72,12 @@ def calculate_class1_metrics(y_true, y_pred):
         # This happens if only one class is present in y_true or y_pred
         return np.nan, np.nan, np.nan
 
-    # Precision for class 1 = TP / (TP + FP)
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-    # True Positive Rate (Recall) for class 1 = TP / (TP + FN)
-    tpr = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-    # False Positive Rate for class 1 = FP / (FP + TN)
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    fnr = fn / (fn + tp) if (fn + tp) > 0 else 0.0
     fpr = fp / (fp + tn) if (fp + tn) > 0 else 0.0
-    
-    return precision, tpr, fpr
+
+    return precision, recall, fnr, fpr
 
 def calculate_final_metrics(algo, X_eval, y_eval):
     """Calculates final Precision, Recall, and FNR for class 1."""

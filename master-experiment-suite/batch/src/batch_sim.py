@@ -258,10 +258,13 @@ def calculate_class1_metrics(y_true, y_pred):
     try:
         tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[-1, 1]).ravel()
     except ValueError: return np.nan, np.nan, np.nan
+
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-    tpr = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    fnr = fn / (fn + tp) if (fn + tp) > 0 else 0.0
     fpr = fp / (fp + tn) if (fp + tn) > 0 else 0.0
-    return precision, tpr, fpr
+
+    return precision, recall, fnr, fpr
 
 # =============================================================================
 # 2. MAIN BATCH EXPERIMENT SCRIPT
@@ -315,9 +318,9 @@ if __name__ == "__main__":
                 # Initialize models for this dataset
                 n_features = X_train.shape[1]
                 models_to_run = {
-                    "PassiveAggressive": PassiveAggressive(n_features=n_features),
+                    "PA": PassiveAggressive(n_features=n_features),
                     "Perceptron": Perceptron(n_features=n_features),
-                    "GradientLearning": GradientLearning(n_features=n_features),
+                    "GLC": GradientLearning(n_features=n_features),
                     "AROW": AROW(n_features=n_features, r=1.0),
                     "RDA": RDA(n_features=n_features, lambda_param=0.01, gamma_param=1.0),
                     "SCW": SCW(n_features=n_features, C=0.1, eta=0.95),
@@ -338,23 +341,23 @@ if __name__ == "__main__":
                     
                     # Evaluate on the training set after all epochs are complete
                     y_preds_train = [model.predict(x) for x in X_train]
-                    train_precision, train_tpr, train_fpr = calculate_class1_metrics(y_train, y_preds_train)
-                    
+                    train_precision, train_tpr, train_fnr, train_fpr = calculate_class1_metrics(y_train, y_preds_train)
+
                     # Evaluate the final model on the unseen test set
                     y_preds_test = [model.predict(x) for x in X_test]
-                    test_precision, test_tpr, test_fpr = calculate_class1_metrics(y_test, y_preds_test)
-                    
+                    test_precision, test_tpr, test_fnr, test_fpr = calculate_class1_metrics(y_test, y_preds_test)
+
                     all_results.append({
                         'Dataset': dataset_name, 'Algorithm': algo_name,
-                        'Train_Precision': train_precision, 'Train_TPR': train_tpr, 'Train_FPR': train_fpr,
-                        'Test_Precision': test_precision, 'Test_TPR': test_tpr, 'Test_FPR': test_fpr
+                        'Train_Precision': train_precision, 'Train_Recall': train_tpr, 'Train_FNR': train_fnr, 'Train_FPR': train_fpr,
+                        'Test_Precision': test_precision, 'Test_Recall': test_tpr, 'Test_FNR': test_fnr, 'Test_FPR': test_fpr
                     })
             
             # --- Compile and save results ---
             if all_results:
                 final_df = pd.DataFrame(all_results)
-                cols_order = ['Dataset', 'Algorithm', 'Train_Precision', 'Test_Precision',
-                              'Train_TPR', 'Test_TPR', 'Train_FPR', 'Test_FPR']
+                cols_order = ['Dataset', 'Algorithm', 'Train_Precision','Train_Recall' ,'Train_FPR','Train_FNR',
+                              'Test_Precision' ,'Test_Recall', 'Test_FNR', 'Test_FPR']
                 final_df = final_df[cols_order]
                 print("\n" + "="*80)
                 print("BATCH EVALUATION COMPLETE. FINAL COMBINED RESULTS:")

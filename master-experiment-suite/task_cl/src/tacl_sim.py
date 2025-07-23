@@ -146,8 +146,8 @@ class OnlineStreamSimulator:
         for name in self.models.keys():
             # Standard metrics on the entire prediction stream
             y_pred_stream = self.prediction_history[name]
-            precision, tpr, fpr = calculate_class1_metrics(y_true_stream, y_pred_stream)
-            
+            precision, recall, fnr, fpr = calculate_class1_metrics(y_true_stream, y_pred_stream)
+
             # Overall forgetting is the average of the F_k(j) scores calculated at each step
             avg_forgetting = np.mean(self.forgetting_history[name]) if self.forgetting_history[name] else 0.0
             std_forgetting = np.std(self.forgetting_history[name]) if self.forgetting_history[name] else 0.0
@@ -155,7 +155,8 @@ class OnlineStreamSimulator:
             final_results.append({
                 "Algorithm": name,
                 "Precision": precision,
-                "TPR": tpr,
+                "Recall": recall,
+                "FNR": fnr,
                 "FPR": fpr,
                 "Forgetting": avg_forgetting,
                 "Deviation": std_forgetting
@@ -217,8 +218,8 @@ if __name__ == "__main__":
 
             if all_results_list:
                 final_combined_df = pd.concat(all_results_list, ignore_index=True)
-                
-                cols_order = ['Dataset', 'Algorithm', 'Precision', 'TPR', 'FPR', 'Forgetting', 'Deviation']
+
+                cols_order = ['Dataset', 'Algorithm', 'Precision', 'Recall', 'FNR', 'FPR', 'Forgetting', 'Deviation']
                 final_combined_df = final_combined_df[cols_order]
 
                 print("\n" + "="*80)
