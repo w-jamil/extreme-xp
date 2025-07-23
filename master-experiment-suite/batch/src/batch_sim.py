@@ -356,8 +356,25 @@ if __name__ == "__main__":
             # --- Compile and save results ---
             if all_results:
                 final_df = pd.DataFrame(all_results)
-                cols_order = ['Dataset', 'Algorithm', 'Train_Precision','Train_Recall' ,'Train_FPR','Train_FNR',
-                              'Test_Precision' ,'Test_Recall', 'Test_FNR', 'Test_FPR']
+                # A more consistent and readable order
+                cols_order = [
+                    # Identifiers
+                    'Dataset', 
+                    'Algorithm', 
+                    
+                    # Training Set Performance
+                    'Train_Precision',
+                    'Train_Recall',
+                    'Train_FPR',
+                    'Train_FNR',
+                    
+                    # Testing Set Performance (in the same order)
+                    'Test_Precision',
+                    'Test_Recall',
+                    'Test_FPR',
+                    'Test_FNR'
+                ]
+
                 final_df = final_df[cols_order]
                 final_df.sort_values(by=['Algorithm', 'Dataset'], inplace=True)
                 print("\n" + "="*80)
