@@ -404,11 +404,12 @@ if __name__ == "__main__":
                         # Optionally, store a failed result
                         all_results.append({
                             'Dataset': dataset_name, 'Algorithm': algo_name,
-                            'Precision': np.nan, 'TPR': np.nan, 'FPR': np.nan
+                            'Precision': np.nan, 'Recall': np.nan, 'FNR': np.nan, 'FPR': np.nan
                         })
 
             if all_results:
                 final_df = pd.DataFrame(all_results)
+                final_df.sort_values(by=['Algorithm', 'Dataset'], inplace=True)
                 
                 print("\n" + "="*60)
                 print("BATCH EVALUATION COMPLETE. FINAL COMBINED RESULTS:")

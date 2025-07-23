@@ -221,6 +221,7 @@ if __name__ == "__main__":
 
                 cols_order = ['Dataset', 'Algorithm', 'Precision', 'Recall', 'FNR', 'FPR', 'Forgetting', 'Deviation']
                 final_combined_df = final_combined_df[cols_order]
+                final_combined_df.sort_values(by=['Algorithm', 'Dataset'], inplace=True)
 
                 print("\n" + "="*80)
                 print("BATCH SIMULATION COMPLETE. FINAL COMBINED RESULTS:")

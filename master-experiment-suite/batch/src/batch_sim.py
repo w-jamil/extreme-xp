@@ -359,6 +359,7 @@ if __name__ == "__main__":
                 cols_order = ['Dataset', 'Algorithm', 'Train_Precision','Train_Recall' ,'Train_FPR','Train_FNR',
                               'Test_Precision' ,'Test_Recall', 'Test_FNR', 'Test_FPR']
                 final_df = final_df[cols_order]
+                final_df.sort_values(by=['Algorithm', 'Dataset'], inplace=True)
                 print("\n" + "="*80)
                 print("BATCH EVALUATION COMPLETE. FINAL COMBINED RESULTS:")
                 print("="*80)
