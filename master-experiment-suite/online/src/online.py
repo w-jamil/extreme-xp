@@ -204,7 +204,7 @@ def load_and_process_data(file_path):
     if 'user_id' in df.columns:
         df = df.drop(columns=['user_id'], axis=1)
     x_df = df.groupby(['timestamp']).sum()
-    y_series = x_df["label"].map({0: -1, 1: 1, 2: 1, 3: 1, 4: 1}).fillna(-1)
+    y_series = pd.Series(np.where(x_df["label"] > 0, 1, -1), index=x_df.index)
     x_df = x_df.drop(columns=['label'], axis=1)
     return x_df, y_series.to_numpy()
 

@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import os
 import glob
@@ -58,8 +59,8 @@ class TaskGenerator:
             x_task = task_df.groupby(['timestamp']).sum()
             
             # Map labels: 0 is normal (-1), all others are malicious (1)
-            y_task = x_task["label"].map({0: -1, 1: 1, 2: 1, 3: 1, 4: 1}).fillna(-1)
-            
+            y_task = pd.Series(np.where(x_task['label'] > 0, 1, -1), index=x_task.index)
+
             # Create feature matrix X by dropping the label
             x_task = x_task.drop(columns=['label'], axis=1)
             
