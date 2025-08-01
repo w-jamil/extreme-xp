@@ -80,23 +80,66 @@ def PERCEPT(X, y):
     return y_pred, weight_history
 
 # --- CORRECTED OGL (as Online Gradient Descent) ---
-def OGL(X, y, eta=0.1):
-    """Online Gradient Descent with Hinge Loss."""
+import numpy as np
+# Assuming pandas and argparse are used elsewhere, but not needed for this function
+# import pandas as pd 
+# import argparse
+
+def OGL(X, y, tuning_parameter):
+    """
+    Implements an adaptive online learning algorithm
+
+    Args:
+        X (array-like): Input feature data of shape (n_samples, n_features).
+        y (array-like): True labels of shape (n_samples,). Must be {1, -1}.
+        tuning_parameter (float): A smoothing parameter 'a' for the update rule,
+                                  added to the denominator to prevent instability.
+
+    Returns:
+        tuple: A tuple containing:
+            - y_pred (np.ndarray): The array of predictions made for each sample.
+            - weight_history (np.ndarray): The history of weight vectors after each update.
+    """
+    # 1. Convert inputs to NumPy arrays for consistent operations.
     X_np = np.asarray(X)
     y_np = np.asarray(y)
     n_samples, n_features = X_np.shape
+
+    # 2. Initialize the weight vector to all zeros, matching the class's likely start state.
     w = np.zeros(n_features)
+
+    # 3. Prepare arrays to store results.
     y_pred = np.zeros(n_samples)
     weight_history = np.zeros((n_samples, n_features))
+
+    # 4. Loop through each data sample sequentially (Online Learning).
     for i in range(n_samples):
         x = X_np[i]
         y_actual = y_np[i]
+
+        # --- This block matches the class's `predict` method ---
+        # Make a prediction using the current weight vector.
         prediction_at_i = np.sign(x.dot(w))
-        y_pred[i] = prediction_at_i if prediction_at_i != 0 else 1
-        if y_actual * x.dot(w) < 1:
-            gradient = -y_actual * x
-            w -= eta * gradient
+        # Handle the case where the dot product is zero; default to 1.
+        if prediction_at_i == 0:
+            prediction_at_i = 1
+        y_pred[i] = prediction_at_i
+        
+        # --- This block matches the class's `delta` method ---
+        # Calculate the denominator for the update rule. np.linalg.norm(x) is the
+        # L2-norm, equivalent to (x.dot(x))**.5
+        denominator = np.linalg.norm(x) + tuning_parameter
+
+        # Apply the update rule. This is performed on every sample, just like the class.
+        # Check for a zero denominator to prevent division by zero errors.
+        if denominator > 1e-9: # Use a small epsilon for safety
+            # The update formula is: w = w + (y_actual - y_pred) / (||x|| + a) * x
+            w = w + (y_actual - prediction_at_i) / denominator * x
+
+        # 5. Store the updated weight vector for this step.
         weight_history[i, :] = w
+
+    # 6. Return the predictions and the history of weights.
     return y_pred, weight_history
 
 # RDA (Correct in original)
@@ -195,25 +238,38 @@ def AdaRDA(X, y, lambda_param=1, eta_param=1, delta_param=1):
 # =============================================================================
 
 def load_and_process_data(file_path):
+    """
+    Loads Parquet data, aggregates features by timestamp, creates a binary
+    target variable, and returns features (x) and labels (y) as NumPy arrays.
+    """
     try:
+        # Attempt to read the Parquet file.
         df = pd.read_parquet(file_path)
     except Exception as e:
         print(f"  - ERROR: Could not read file '{file_path}'. Skipping. Reason: {e}")
         return None, None
+    
+    # 1. Sort data chronologically and remove the user_id column if it exists.
     df = df.sort_values(['timestamp']).reset_index(drop=True)
-    # if 'user_id' in df.columns:
-    #     df = df.drop(columns=['user_id'], axis=1)
-    # x_df = df.groupby(['timestamp']).sum()
-    # y_series = pd.Series(np.where(x_df["label"] > 0, 1, -1), index=x_df.index)
-    # x_df = x_df.drop(columns=['label'], axis=1)
-        # df = df.sort_values(['timestamp']).reset_index(drop=True)
-    if 'user_id' in df.columns: df = df.drop(columns=['user_id'], axis=1)
-    # x_df = df.groupby(['timestamp']).sum()
-    # y_series = pd.Series(np.where(x_df['label'] > 0, 1, -1), index=x_df.index)
-    y_series = df['label']
-    x_df = df
+    if 'user_id' in df.columns:
+        df = df.drop(columns=['user_id'], axis=1)
+        
+    # 2. Perform the crucial aggregation step.
+    # This groups all events with the same timestamp and sums their features,
+    # creating one row per timestamp.
+    x_df = df.groupby(['timestamp']).sum()
+    
+    # 3. Create the binary target variable (y) from the aggregated 'label'.
+    #    - If the summed label for a timestamp is positive (> 0), it's a positive case (1).
+    #    - Otherwise (if the sum is 0 or negative), it's a negative case (-1).
+    #    The result is a NumPy array.
+    y_numpy = np.where(x_df['label'] > 0, 1, -1)
+    
+    # 4. Remove the original 'label' column from the feature set (x) after using it.
     x_df = x_df.drop(columns=['label'], axis=1)
-    return x_df.to_numpy(), y_series.to_numpy()
+    
+    # 5. Return the final features and labels as NumPy arrays, ready for a model.
+    return x_df.to_numpy(), y_numpy
 
 def calculate_class1_metrics(y_true, y_pred):
     try:
