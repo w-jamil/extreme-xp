@@ -56,10 +56,11 @@ class TaskGenerator:
             # The 'groupby' and 'sum' logic from your original script
             if 'user_id' in task_df.columns:
                  task_df = task_df.drop(columns=['user_id'], axis=1)
-            x_task = task_df.groupby(['timestamp']).sum()
+            # x_task = task_df.groupby(['timestamp']).sum()
             
             # Map labels: 0 is normal (-1), all others are malicious (1)
-            y_task = pd.Series(np.where(x_task['label'] > 0, 1, -1), index=x_task.index)
+            # y_task = pd.Series(np.where(x_task['label'] > 0, 1, -1), index=x_task.index)
+            y_task = pd.Series(x_task['label'])
 
             # Create feature matrix X by dropping the label
             x_task = x_task.drop(columns=['label'], axis=1)

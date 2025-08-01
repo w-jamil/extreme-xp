@@ -32,10 +32,11 @@ class DataPreprocessor:
         
         # Drop user_id and group by timestamp
         crypto = crypto.drop(columns=['user_id'], axis=1)
-        x_crypto = crypto.groupby(['timestamp']).sum()
+        # x_crypto = crypto.groupby(['timestamp']).sum()
 
         # Create target variable y (-1 for normal, 1 for attack)
-        y_crypto = pd.Series(np.where(x_crypto['label'] > 0, 1, -1), index=x_crypto.index)
+        # y_crypto = pd.Series(np.where(x_crypto['label'] > 0, 1, -1), index=x_crypto.index)
+        y_crypto = pd.Series(x_crypto['label'])
 
         # Create feature matrix X
         x_crypto = x_crypto.drop(columns=['label'], axis=1)

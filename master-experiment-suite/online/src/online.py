@@ -201,12 +201,19 @@ def load_and_process_data(file_path):
         print(f"  - ERROR: Could not read file '{file_path}'. Skipping. Reason: {e}")
         return None, None
     df = df.sort_values(['timestamp']).reset_index(drop=True)
-    if 'user_id' in df.columns:
-        df = df.drop(columns=['user_id'], axis=1)
-    x_df = df.groupby(['timestamp']).sum()
-    y_series = pd.Series(np.where(x_df["label"] > 0, 1, -1), index=x_df.index)
+    # if 'user_id' in df.columns:
+    #     df = df.drop(columns=['user_id'], axis=1)
+    # x_df = df.groupby(['timestamp']).sum()
+    # y_series = pd.Series(np.where(x_df["label"] > 0, 1, -1), index=x_df.index)
+    # x_df = x_df.drop(columns=['label'], axis=1)
+        # df = df.sort_values(['timestamp']).reset_index(drop=True)
+    if 'user_id' in df.columns: df = df.drop(columns=['user_id'], axis=1)
+    # x_df = df.groupby(['timestamp']).sum()
+    # y_series = pd.Series(np.where(x_df['label'] > 0, 1, -1), index=x_df.index)
+    y_series = df['label']
+    x_df = df
     x_df = x_df.drop(columns=['label'], axis=1)
-    return x_df, y_series.to_numpy()
+    return x_df.to_numpy(), y_series.to_numpy()
 
 def calculate_class1_metrics(y_true, y_pred):
     try:
