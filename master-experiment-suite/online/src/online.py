@@ -80,68 +80,43 @@ def PERCEPT(X, y):
     return y_pred, weight_history
 
 # --- CORRECTED OGL (as Online Gradient Descent) ---
-import numpy as np
-# Assuming pandas and argparse are used elsewhere, but not needed for this function
-# import pandas as pd 
-# import argparse
+def OGL(X, y):
 
-def OGL(X, y, tuning_parameter):
-    """
-    Implements an adaptive online learning algorithm
-
-    Args:
-        X (array-like): Input feature data of shape (n_samples, n_features).
-        y (array-like): True labels of shape (n_samples,). Must be {1, -1}.
-        tuning_parameter (float): A smoothing parameter 'a' for the update rule,
-                                  added to the denominator to prevent instability.
-
-    Returns:
-        tuple: A tuple containing:
-            - y_pred (np.ndarray): The array of predictions made for each sample.
-            - weight_history (np.ndarray): The history of weight vectors after each update.
-    """
-    # 1. Convert inputs to NumPy arrays for consistent operations.
     X_np = np.asarray(X)
     y_np = np.asarray(y)
+
     n_samples, n_features = X_np.shape
 
-    # 2. Initialize the weight vector to all zeros, matching the class's likely start state.
     w = np.zeros(n_features)
-
-    # 3. Prepare arrays to store results.
     y_pred = np.zeros(n_samples)
     weight_history = np.zeros((n_samples, n_features))
 
-    # 4. Loop through each data sample sequentially (Online Learning).
+    # 3. Loop over efficient NumPy arrays.
     for i in range(n_samples):
         x = X_np[i]
         y_actual = y_np[i]
 
-        # --- This block matches the class's `predict` method ---
-        # Make a prediction using the current weight vector.
-        prediction_at_i = np.sign(x.dot(w))
-        # Handle the case where the dot product is zero; default to 1.
-        if prediction_at_i == 0:
-            prediction_at_i = 1
-        y_pred[i] = prediction_at_i
+        # Calculate prediction once.
+        prediction = np.sign(x.dot(w))
+        if prediction == 0:
+            prediction = 1
+            
+        y_pred[i] = prediction
         
-        # --- This block matches the class's `delta` method ---
-        # Calculate the denominator for the update rule. np.linalg.norm(x) is the
-        # L2-norm, equivalent to (x.dot(x))**.5
-        denominator = np.linalg.norm(x) + tuning_parameter
+        # --- FIX: ADDED SAFETY CHECK FOR NUMERICAL STABILITY ---
+        l2_norm = np.linalg.norm(x)
+        
+        # Only perform the update if the vector has a meaningful norm.
+        # This prevents division by zero or by a very small number.
+        if l2_norm > 1e-9: # Use a small epsilon for safety
+            denominator = l2_norm + 0.0001
+            update_step = (y_actual - prediction) / denominator
+            w = w + update_step * x
 
-        # Apply the update rule. This is performed on every sample, just like the class.
-        # Check for a zero denominator to prevent division by zero errors.
-        if denominator > 1e-9: # Use a small epsilon for safety
-            # The update formula is: w = w + (y_actual - y_pred) / (||x|| + a) * x
-            w = w + (y_actual - prediction_at_i) / denominator * x
-
-        # 5. Store the updated weight vector for this step.
+        # Store the updated weight vector.
         weight_history[i, :] = w
-
-    # 6. Return the predictions and the history of weights.
+    
     return y_pred, weight_history
-
 # RDA (Correct in original)
 def RDA(X, y, lambda_param=1, gamma_param=1):
     X_np = np.asarray(X)
