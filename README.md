@@ -82,3 +82,5 @@ You can now open these files with Excel, Google Sheets, or any other spreadsheet
 
 -   **Download Fails**
     Ensure you have a stable internet connection. If the Zenodo link is down, you may need to check the `ZENODO_ARCHIVE_URL` variable in the relevant Python script (`tacl_sim.py`, etc.).
+
+Contributions are welcome. If you encounter any bugs, have feature requests, or wish to contribute code, please feel free to open an issue or submit a pull request on the GitHub repository.
