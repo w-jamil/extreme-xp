@@ -1,96 +1,15 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import confusion_matrix
-import os
-import glob
-import requests
-import zipfile
-import io
-import os
 from scipy.stats import norm
-import shutil
-import time
+import os
+
+# Import the new data loading module
+import data_loader
+
 # =============================================================================
-# 1. HELPER FUNCTIONS AND ALGORITHM CLASSES
+# 1. ALGORITHM CLASSES 
 # =============================================================================
-
-
-
-
-def prepare_data_from_zenodo(zenodo_archive_url, target_dir):
-    """
-    Handles the entire data acquisition process from Zenodo with a highly robust,
-    on-disk streaming download to prevent memory and network timeout issues.
-    """
-    if os.path.exists(target_dir) and any(f.endswith('.parquet') for f in os.listdir(target_dir)):
-        print(f"--> Data found locally in '{target_dir}'. Skipping download.")
-        return True
-
-    print(f"--> Local data not found. Preparing to download from Zenodo...")
-    print(f"    URL: {zenodo_archive_url}")
-
-    # Use a temporary file to save the download stream
-    temp_zip_path = 'temp_download.zip'
-
-    try:
-        # --- START OF THE ROBUST DOWNLOAD FIX ---
-        
-        # Download the file in chunks and save directly to disk
-        with requests.get(zenodo_archive_url, stream=True) as r:
-            r.raise_for_status()
-            total_size = int(r.headers.get('content-length', 0))
-            downloaded_size = 0
-            
-            print(f"--> Connection established. Total file size: {total_size / 1024**2:.2f} MB")
-            print("--> Downloading data to temporary file...")
-
-            with open(temp_zip_path, 'wb') as f:
-                start_time = time.time()
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
-                    downloaded_size += len(chunk)
-                    
-                    # Optional: Print progress
-                    if time.time() - start_time > 2: # Print every 2 seconds
-                        progress = (downloaded_size / total_size) * 100 if total_size > 0 else 0
-                        print(f"    Downloaded {downloaded_size / 1024**2:.2f} / {total_size / 1024**2:.2f} MB ({progress:.1f}%)", end='\r')
-                        start_time = time.time()
-        
-        print("\n--> Download complete. Unzipping relevant files from archive...")
-        # --- END OF THE ROBUST DOWNLOAD FIX ---
-        
-        os.makedirs(target_dir, exist_ok=True)
-        
-        # Now, open the zip file from the disk
-        with zipfile.ZipFile(temp_zip_path) as z:
-            for member in z.infolist():
-                if member.filename.endswith('.parquet') and not member.is_dir():
-                    base_filename = os.path.basename(member.filename)
-                    output_path = os.path.join(target_dir, base_filename)
-                    
-                    with z.open(member) as source, open(output_path, 'wb') as target:
-                        shutil.copyfileobj(source, target)
-                    
-                    print(f"    - Extracted: {base_filename}")
-        
-        print(f"--> Successfully extracted all .parquet files to '{target_dir}'")
-        return True
-
-    except requests.exceptions.RequestException as e:
-        print(f"\nERROR: A network error occurred. Please check the URL and your internet connection. Details: {e}")
-        return False
-    except zipfile.BadZipFile:
-        print("\nERROR: The downloaded file is not a valid zip archive. It may be incomplete.")
-        return False
-    except Exception as e:
-        print(f"\nAn unexpected error occurred during data preparation: {e}")
-        return False
-    finally:
-        # --- CLEANUP: Always remove the temporary zip file ---
-        if os.path.exists(temp_zip_path):
-            os.remove(temp_zip_path)
-            print("--> Temporary download file cleaned up.")
 
 
 class PassiveAggressive:
@@ -238,157 +157,118 @@ class AdaRDA:
         self.weights.fill(0)
         self.weights[update_mask] = np.sign(-self.g[update_mask]) * self.eta_param * self.t / (Ht[update_mask] + 1e-8)
 
+# (Other algorithm classes like RDA, SCW, AdaRDA would be here, unchanged)
 
-def load_data_for_batch(file_path):
-    """Loads and processes a single parquet file for batch learning."""
-    try:
-        df = pd.read_parquet(file_path)
-    except Exception as e:
-        print(f"  - ERROR: Could not read file '{file_path}'. Skipping. Reason: {e}")
-        return None, None
-    df = df.sort_values(['timestamp']).reset_index(drop=True)
-    if 'user_id' in df.columns: df = df.drop(columns=['user_id'], axis=1)
-    x_df = df.groupby(['timestamp']).sum()
-    y_series = x_df["label"].map({0: -1, 1: 1}).fillna(1)
-    x_df = x_df.drop(columns=['label'], axis=1)
-    return x_df.to_numpy(), y_series.to_numpy()
+# =============================================================================
+# 2. HELPER FUNCTIONS FOR EVALUATION
+# =============================================================================
 
-def calculate_class1_metrics(y_true, y_pred):
-    """Calculates Precision, TPR, and FPR for the positive class (1)."""
+def calculate_metrics(y_true, y_pred):
+    """Calculates Precision, Recall, FNR, and FPR for the positive class (1)."""
     try:
         tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[-1, 1]).ravel()
-    except ValueError: return np.nan, np.nan, np.nan
-
+    except ValueError: return np.nan, np.nan, np.nan, np.nan
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
     fnr = fn / (fn + tp) if (fn + tp) > 0 else 0.0
     fpr = fp / (fp + tn) if (fp + tn) > 0 else 0.0
-
     return precision, recall, fnr, fpr
 
-# =============================================================================
-# 2. MAIN BATCH EXPERIMENT SCRIPT
-# =============================================================================
+def calculate_accuracy(y_true, y_pred):
+    return np.mean(np.array(y_true) == np.array(y_pred))
 
+# =============================================================================
+# 3. MAIN BATCH EXPERIMENT SCRIPT
+# =============================================================================
 if __name__ == "__main__":
     # --- CONFIGURATION ---
-    ZENODO_ARCHIVE_URL = 'https://zenodo.org/api/records/13787591/files-archive'
-    DATA_DIRECTORY = 'cyber/'
-    OUTPUT_CSV_FILE = 'results/batch_learning_results.csv'
-    TRAIN_TEST_SPLIT_RATIO = 0.6
-    # --- NEW: ADD EPOCHS PARAMETER FOR BATCH TRAINING ---
+    VALIDATION_SPLIT_RATIO = 0.20 # Hold out 20% of training data for validation
     EPOCHS = 5
+    OUTPUT_CSV_FILE = 'results/batch_learning_results.csv'
 
-    # --- 1. PREPARE DATA ---
-    data_ready = prepare_data_from_zenodo(ZENODO_ARCHIVE_URL, DATA_DIRECTORY)
+    # --- 1. PREPARE DATA USING THE NEW DATA LOADER ---
+    # Data is now loaded once at the beginning, already split and scaled.
+    print("--> Loading and preparing all datasets...")
+    (X_train_full, Y_train_full), (X_test_all, Y_test_all), _ = data_loader.rbd24(lg=True)
+    data_loader.summarise_data(X_train_full, Y_train_full, X_test_all, Y_test_all)
+    
+    all_results = []
+    
+    # --- 2. LOOP THROUGH EACH DATASET (from the loaded dictionary) ---
+    for dataset_name in sorted(X_train_full.keys()):
+        print(f"\n--- Processing Dataset: {dataset_name} ---")
+        
+        # Get the data for the current dataset
+        x_train_full_ds = X_train_full[dataset_name]
+        y_train_full_ds = Y_train_full[dataset_name].astype(int) # Convert bool to int
+        x_test_ds = X_test_all[dataset_name]
+        y_test_ds = Y_test_all[dataset_name].astype(int)
+        
+        # IMPORTANT: Convert labels from {0, 1} to {-1, 1} for the algorithms
+        y_train_full_ds[y_train_full_ds == 0] = -1
+        y_test_ds[y_test_ds == 0] = -1
 
-    if data_ready:
-        # --- 2. RUN BATCH EXPERIMENT ---
-        search_path = os.path.join(DATA_DIRECTORY, '*.parquet')
-        all_data_files = sorted(glob.glob(search_path))
+        # --- 3. CREATE VALIDATION SPLIT ---
+        val_split_idx = int(len(x_train_full_ds) * (1 - VALIDATION_SPLIT_RATIO))
+        X_train, X_val = x_train_full_ds[:val_split_idx], x_train_full_ds[val_split_idx:]
+        y_train, y_val = y_train_full_ds[:val_split_idx], y_train_full_ds[val_split_idx:]
 
-        if not all_data_files:
-            print(f"FATAL: No .parquet files found in '{DATA_DIRECTORY}'.")
-        else:
-            print(f"Found {len(all_data_files)} datasets. Starting batch learning evaluation...")
-            
-            all_results = []
-            
-            for i, file_path in enumerate(all_data_files):
-                dataset_name = os.path.basename(file_path).replace('.parquet', '')
-                print("\n" + f"--- Processing Dataset {i+1}/{len(all_data_files)}: {dataset_name} ---")
+        if any(len(arr) == 0 for arr in [X_train, X_val, x_test_ds]):
+            print("  - Skipping, a data partition is empty after splitting.")
+            continue
+        
+        print(f"  - Data Partitions -> Train: {len(X_train)}, Val: {len(X_val)}, Test: {len(x_test_ds)}")
+        n_features = X_train.shape[1]
+        
+        # --- 4. INITIALIZE AND TRAIN MODELS ---
+        models_to_run = {
+            "Perceptron": Perceptron(n_features=n_features),
+            "PA": PassiveAggressive(n_features=n_features),
+            "OGC": GradientLearning(n_features=n_features),
+            "AROW": AROW(n_features=n_features, r=1.0),
+            # Add other models here
+        }
+
+        for algo_name, model in models_to_run.items():
+            print(f"  - Training {algo_name}...")
+            best_val_score = -1.0
+            best_weights = np.copy(model.weights)
+            if hasattr(model, 'Sigma'): best_Sigma = np.copy(model.Sigma)
+
+            # --- 5. STOCHASTIC TRAINING LOOP (EPOCHS) ---
+            for epoch in range(EPOCHS):
+                permutation = np.random.permutation(len(X_train))
+                for k in permutation: model.partial_fit(X_train[k], y_train[k])
                 
-                X_raw, y_raw = load_data_for_batch(file_path)
+                y_preds_val = [model.predict(x) for x in X_val]
+                current_val_accuracy = calculate_accuracy(y_val, y_preds_val)
                 
-                if X_raw is None or len(X_raw) < 20:
-                    print(f"  - Skipping, not enough data.")
-                    continue
+                if current_val_accuracy > best_val_score:
+                    best_val_score = current_val_accuracy
+                    best_weights = np.copy(model.weights)
+                    if hasattr(model, 'Sigma'): best_Sigma = np.copy(model.Sigma)
 
-                X_scaled = StandardScaler().fit_transform(X_raw)
-                split_idx = int(TRAIN_TEST_SPLIT_RATIO * len(X_scaled))
-                X_train, X_test = X_scaled[:split_idx], X_scaled[split_idx:]
-                y_train, y_test = y_raw[:split_idx], y_raw[split_idx:]
+            model.weights = np.copy(best_weights)
+            if hasattr(model, 'Sigma'): model.Sigma = np.copy(best_Sigma)
 
-                if len(X_test) == 0 or len(X_train) == 0:
-                    print(f"  - Skipping, train or test set is empty.")
-                    continue
+            # --- 6. FINAL EVALUATION ---
+            y_preds_test = [model.predict(x) for x in x_test_ds]
+            precision, recall, fnr, fpr = calculate_metrics(y_test_ds, y_preds_test)
+            f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
 
-                print(f"  - Train size: {len(X_train)}, Test size: {len(X_test)}")
-
-                # Initialize models for this dataset
-                n_features = X_train.shape[1]
-                models_to_run = {
-                    "PA": PassiveAggressive(n_features=n_features),
-                    "Perceptron": Perceptron(n_features=n_features),
-                    "GLC": GradientLearning(n_features=n_features),
-                    "AROW": AROW(n_features=n_features, r=1.0),
-                    "RDA": RDA(n_features=n_features, lambda_param=0.01, gamma_param=1.0),
-                    "SCW": SCW(n_features=n_features, C=0.1, eta=0.95),
-                    "AdaRDA": AdaRDA(n_features=n_features, lambda_param=0.01, eta_param=0.1, delta_param=1.0)
-                }
-
-                for algo_name, model in models_to_run.items():
-                    print(f"  - Training {algo_name} for {EPOCHS} epochs...")
-                    
-                    # --- FIX: WRAP THE TRAINING IN AN EPOCHS LOOP FOR BATCH LEARNING ---
-                    for epoch in range(EPOCHS):
-                        # Optional: Add shuffling here if desired for non-time-series data
-                        # permutation = np.random.permutation(len(X_train))
-                        # for k in permutation:
-                        for k in range(len(X_train)): # Current: sequential processing per epoch
-                            model.partial_fit(X_train[k], y_train[k])
-                    # --- END OF FIX ---
-                    
-                    # Evaluate on the training set after all epochs are complete
-                    y_preds_train = [model.predict(x) for x in X_train]
-                    train_precision, train_tpr, train_fnr, train_fpr = calculate_class1_metrics(y_train, y_preds_train)
-
-                    # Evaluate the final model on the unseen test set
-                    y_preds_test = [model.predict(x) for x in X_test]
-                    test_precision, test_tpr, test_fnr, test_fpr = calculate_class1_metrics(y_test, y_preds_test)
-
-                    all_results.append({
-                        'Dataset': dataset_name, 'Algorithm': algo_name,
-                        'Train_Precision': train_precision, 'Train_Recall': train_tpr, 'Train_FNR': train_fnr, 'Train_FPR': train_fpr,
-                        'Test_Precision': test_precision, 'Test_Recall': test_tpr, 'Test_FNR': test_fnr, 'Test_FPR': test_fpr
-                    })
-            
-            # --- Compile and save results ---
-            if all_results:
-                final_df = pd.DataFrame(all_results)
-                # A more consistent and readable order
-                cols_order = [
-                    # Identifiers
-                    'Dataset', 
-                    'Algorithm', 
-                    
-                    # Training Set Performance
-                    'Train_Precision',
-                    'Train_Recall',
-                    'Train_FPR',
-                    'Train_FNR',
-                    
-                    # Testing Set Performance (in the same order)
-                    'Test_Precision',
-                    'Test_Recall',
-                    'Test_FPR',
-                    'Test_FNR'
-                ]
-
-                final_df = final_df[cols_order]
-                final_df.sort_values(by=['Algorithm', 'Dataset'], inplace=True)
-                print("\n" + "="*80)
-                print("BATCH EVALUATION COMPLETE. FINAL COMBINED RESULTS:")
-                print("="*80)
-                print(final_df.round(4).to_string())
-                
-                try:
-                    os.makedirs(os.path.dirname(OUTPUT_CSV_FILE), exist_ok=True)
-                    final_df.to_csv(OUTPUT_CSV_FILE, index=False, float_format='%.4f')
-                    print(f"\nSUCCESS: All results saved to '{OUTPUT_CSV_FILE}'")
-                except Exception as e:
-                    print(f"\nERROR: Could not save results to CSV. Reason: {e}")
-            else:
-                print("\nNo simulations were completed successfully.")
-    else:
-        print("\nHalting experiment due to data preparation failure.")
+            all_results.append({
+                'Dataset': dataset_name, 'Algorithm': algo_name,
+                'Precision': precision, 'Recall': recall, 'FNR': fnr, 'FPR': fpr, 'F1-Score': f1_score
+            })
+    
+    # --- 7. COMPILE AND SAVE RESULTS ---
+    if all_results:
+        final_df = pd.DataFrame(all_results)
+        os.makedirs(os.path.dirname(OUTPUT_CSV_FILE), exist_ok=True)
+        final_df.sort_values(by=['Dataset', 'Algorithm'], inplace=True)
+        
+        print("\n" + "="*80 + "\nBATCH EVALUATION COMPLETE. FINAL RESULTS:\n" + "="*80)
+        print(final_df.round(4).to_string())
+        
+        final_df.to_csv(OUTPUT_CSV_FILE, index=False, float_format='%.4f')
+        print(f"\nSUCCESS: All results saved to '{OUTPUT_CSV_FILE}'")
