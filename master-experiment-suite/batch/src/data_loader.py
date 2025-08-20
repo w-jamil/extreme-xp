@@ -86,7 +86,7 @@ def rbd24(rbd_dir: PathLike = Path.home() / 'data' / 'rbd24',
           split_by_user: bool = True,
           categorical: bool = True,
           test_size: float = .2,
-          lg: bool | Callable = False):
+          lg: bool = False):
     """
     Loads, caches, and prepares the rbd24 dataset for machine learning.
     
@@ -134,8 +134,14 @@ def rbd24(rbd_dir: PathLike = Path.home() / 'data' / 'rbd24',
         xc = x[cat_mask].drop('category', axis=1)
         yc = y[cat_mask]
         
+        # Free memory by deleting references
+        del cat_mask
+        
         X_train[cat_name], Y_train[cat_name], X_test[cat_name], Y_test[cat_name], scalers[cat_name] = \
             _split_and_scale(xc, yc, random_state, categorical, test_size, split_by_user, lg)
+        
+        # Free memory immediately after processing each dataset
+        del xc, yc
         lg("==========================================")
 
     return (X_train, Y_train), (X_test, Y_test), scalers
