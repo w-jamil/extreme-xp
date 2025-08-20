@@ -329,11 +329,12 @@ def calculate_class1_metrics(y_true, y_pred):
 if __name__ == "__main__":
     # --- CONFIGURATION ---
     ZENODO_ARCHIVE_URL = 'https://zenodo.org/api/records/13787591/files-archive'
-    DATA_DIRECTORY = 'cyber/'
+    DATA_DIRECTORY = 'cyber/'  # Use local cyber directory
     OUTPUT_CSV_FILE = 'results/online_results.csv'
     
+    print(f"Using data directory: {DATA_DIRECTORY}")
+    
     # --- Download and prepare data ---
-    # Assuming prepare_data_from_zenodo is defined elsewhere
     data_ready = prepare_data_from_zenodo(ZENODO_ARCHIVE_URL, DATA_DIRECTORY)
 
     if data_ready:

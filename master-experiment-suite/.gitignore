@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Data files (large datasets)
+cyber/*.parquet
+cyber/*.pkl
+cyber/*.zip
+*.csv
+*.xlsx
+
+# Results and outputs
+**/results/*.csv
+**/results/*.png
+**/results/*.jpg
+**/results/*.pdf
+
+# Docker
+.dockerignore
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Temporary files
+temp/
+tmp/
+*.backup
+*.bak
+*_old
+*_copy

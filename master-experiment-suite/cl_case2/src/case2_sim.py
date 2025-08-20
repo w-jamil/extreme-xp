@@ -177,7 +177,9 @@ class OnlineStreamSimulator:
 if __name__ == "__main__":
     # --- BATCH EXPERIMENT CONFIGURATION ---
     ZENODO_ARCHIVE_URL = 'https://zenodo.org/api/records/13787591/files-archive'
-    DATA_DIRECTORY = 'cyber/'  # This is the target folder for our data
+    DATA_DIRECTORY = 'cyber/'  # Use local cyber directory
+    
+    print(f"Using data directory: {DATA_DIRECTORY}")
 
     data_ready = prepare_data_from_zenodo(ZENODO_ARCHIVE_URL, DATA_DIRECTORY)
 

@@ -6,3 +6,4 @@ pyarrow
 glob2
 requests
 scipy
+tqdm
