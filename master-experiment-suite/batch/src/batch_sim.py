@@ -921,7 +921,7 @@ def main():
     
     # Save results
     results_df = pd.DataFrame(results)
-    results_file = 'advanced_custom_algorithms_results.csv'
+    results_file = 'results/batch_results.csv'
     results_df.to_csv(results_file, index=False)
     print(f"\n✓ Results saved to {results_file}")
     
