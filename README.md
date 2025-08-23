@@ -17,28 +17,23 @@ Novel hybrid approach that combines online learning benefits with batch validati
 ### 2. Continual Learning
 **Location**: `cl_case1/` and `cl_case2/` directories
 
-Sequential learning with catastrophic forgetting mitigation
+Novel Sequential learning with catastrophic forgetting mitigation
+
+- 7 algorithms: PassiveAggressive, Perceptron, GradientLearning, AROW, RDA, SCW, AdaRDA
+- Task-agnostic continual learning approaches
+- Formulating sliding window in continual learning paradigm  
+- Processes all 12 RBD24 cybersecurity datasets collectively and individually
+
 
 ### 3. Online Learning  
 **Location**: `online/` directory
 
-Real-time adaptive learning from data streams
+Comparing novel algorithm with state-of-the-art
 
-##  Data and Algorithms
+- 7 algorithms: PassiveAggressive, Perceptron, GradientLearning, AROW, RDA, SCW, AdaRDA
+- Adaptive learning from data streams  
+- Processes all 12 RBD24 cybersecurity datasets
 
-### Datasets
-- **RBD24**: 12 real cybersecurity datasets (desktop/smartphone variants)
-  - OutTLS, NonEnc, Phishing, OutFlash, P2P, Crypto
-  - Automatic download from Zenodo if not present
-
-### OnlineToBatch Algorithms
-1. **PassiveAggressive** - Margin-based online learning
-2. **Perceptron** - Classic classifier  
-3. **GL** - Gradient Learning
-4. **AROW** - Adaptive Regularization of Weight Vectors
-5. **RDA** - Regularized Dual Averaging
-6. **SCW** - Soft Confidence-Weighted learning
-7. **AdaRDA** - Adaptive Regularized Dual Averaging
 
 ### Ensemble Method
 - **WeightedMajorityVoter**: Combines algorithms using recall-based weights
@@ -132,24 +127,8 @@ extreme-xp/
 - Documentation and clean code structure
 - Comprehensive results with detailed FNR/FPR analysis
 - Automatic data handling with Zenodo downloads
----
 
-Sequential learning scenarios:
-- Case 1: Standard continual learning with forgetting analysis
-- Case 2: Advanced continual adaptation
-- Catastrophic forgetting mitigation techniques
-- Per-task performance tracking
-
-### 4. Online Learning
-**Location**: `online/` directory
-
-Real-time adaptive learning:
-- Stream-based algorithm updates
-- Immediate adaptation to new threats
-- Minimal computational overhead
-- Suitable for production deployment
-
-### Experiments
+## Experiments
 
 **Run all experiments:**
 ```bash
