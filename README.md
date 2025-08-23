@@ -28,40 +28,6 @@ Sequential learning with catastrophic forgetting mitigation
 
 Real-time adaptive learning from data streams
 
-## Quick Start
-
-### Prerequisites
-```bash
-# Install requirements
-pip install -r master-experiment-suite/batch/requirements.txt
-```
-
-### Run OnlineToBatch Experiment
-```bash
-cd master-experiment-suite/batch/src
-python batch_sim.py
-```
-
-### Run Standard Batch Experiment
-```bash
-cd master-experiment-suite/batch/src
-python batch_sim.py
-```
-
-### Run All Batch Experiments (Interactive)
-```bash
-# Interactive menu for batch experiments
-cd master-experiment-suite
-bash run_batch.sh
-```
-
-### Run All Experiments
-```bash
-# Runs all available experiments sequentially
-cd master-experiment-suite
-bash run_all.sh
-```
-
 ##  Data and Algorithms
 
 ### Datasets
