@@ -1,6 +1,6 @@
 # Batch, Continual and Online Learning Evaluation
 
-A machine learning experiment suite featuring **Batch Learning**, **Continual Learning**, and **Online Learning** approaches. This suite implements and compares multiple machine learning paradigms using RBD24 datasets. 
+A machine learning experiment suite featuring **Batch Learning**, **Continual Learning**, and **Online Learning** approaches. This suite implements multiple machine learning paradigms using RBD24 datasets. 
 
 ## Experiment Types
 
