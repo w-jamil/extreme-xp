@@ -4,7 +4,7 @@ A machine learning experiment suite featuring **Batch Learning**, **Continual Le
 
 ## Experiment Types
 
-### 1. OnlineToBatch Protocol (Default)
+### 1. OnlineToBatch Protocol
 **Location**: `batch/src/batch_sim.py`
 
 Novel hybrid approach that combines online learning benefits with batch validation:
