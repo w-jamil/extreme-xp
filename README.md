@@ -1,86 +1,203 @@
 # Batch, Continual and Online Learning Evaluation
 
-This project contains a suite of four distinct experiments for evaluating batch, continual and online machine learning algorithms. All code, dependencies, and data are automatically managed by Docker, allowing you to run everything with a single command.
+A machine learning experiment suite featuring **Batch Learning**, **Continual Learning**, and **Online Learning** approaches.
 
-On the first run, the necessary datasets will be automatically downloaded from a Zenodo repository and prepared for the experiments.
+## Overview
 
-## 1. System Requirements
+This suite implements and compares multiple machine learning paradigms using RBD24 datasets. 
 
-Before you begin, you **must** have **Docker Desktop** installed and running on your system.
+## Experiment Types
 
--   **Operating System:** Windows 10/11 or modern macOS/Linux.
--   **Software:** **Docker Desktop**. If you do not have it, download it from the official website:
-    -   [**Download Docker Desktop**](https://www.docker.com/products/docker-desktop/)
+### 1. OnlineToBatch Protocol (Default)
+**Location**: `batch/src/batch_sim.py`
 
-> **IMPORTANT:** After installing Docker Desktop, you must **open the application and wait for it to start completely**. Look for the small whale icon in your system tray (Windows) or menu bar (macOS). The icon must be stable (not animating) to indicate that Docker is running.
+Novel hybrid approach that combines online learning benefits with batch validation:
+- Trains 7 algorithms: PassiveAggressive, Perceptron, GradientLearning, AROW, RDA, SCW, AdaRDA
+- Uses epoch-based training with data shuffling for stochasticity
+- Validates on held-out data to select optimal model weights
+- Weighted majority voting ensemble optimized for recall
+- Processes all 12 RBD24 cybersecurity datasets
 
-## 2. How to Run All Experiments
+### 2. Continual Learning
+**Location**: `cl_case1/` and `cl_case2/` directories
 
-Follow these steps exactly to run the full suite.
+Sequential learning with catastrophic forgetting mitigation
 
-### Step 1: Download and Unzip the Project
+### 3. Online Learning  
+**Location**: `online/` directory
 
-Download the project as a single ZIP file and unzip it into a location on your computer. This will create a main project folder containing all the necessary files. **You do not need to download or place any data files manually.** This project includes a script that runs all four experiments **sequentially** to prevent memory overload issues.
+Real-time adaptive learning from data streams
 
-### Step 2: Open a Terminal
+## Quick Start
 
-Open your command line tool (e.g., Terminal on macOS, or PowerShell/Command Prompt on Windows).
-
-> **Tip:** It's best to open a **new** terminal *after* you have installed and started Docker Desktop.
-
-### Step 3: Navigate to the Project Folder
-
-Use the `cd` command to navigate into the main project folder you just unzipped. This is the folder that contains the `docker-compose.yml` file.
-
+### Prerequisites
 ```bash
-# Example on Windows:
-cd C:\Users\YourUser\Downloads\master-experiment-suite
-
-# Example on macOS/Linux:
-cd /Users/youruser/Downloads/master-experiment-suite
+# Install requirements
+pip install -r master-experiment-suite/batch/requirements.txt
 ```
 
-### Step 4: Run the Single Command
-
-Execute the following command in your terminal. This will automatically build the environment, download data (if needed), and run all four experiments in sequence.
-
+### Run OnlineToBatch Experiment
 ```bash
-chmod +x run_all_experiments.sh
-./run_all_experiments.sh
+cd master-experiment-suite/batch/src
+python batch_sim.py
 ```
 
-or run the following for usual:
-
+### Run Standard Batch Experiment
 ```bash
-docker compose up --build 
+cd master-experiment-suite/batch/src
+python batch_sim.py
 ```
 
+### Run All Batch Experiments (Interactive)
+```bash
+# Interactive menu for batch experiments
+cd master-experiment-suite
+bash run_batch.sh
+```
 
-> **What to Expect:** The first time you run this command, it will be slow as it needs to download the Python environment and the large dataset archives. You will see a lot of text scrolling in your terminal as each experiment runs. This is normal. Subsequent runs will be faster (cl_case2 experiment requires time) as all data and dependencies will be stored locally.
+### Run All Experiments
+```bash
+# Runs all available experiments sequentially
+cd master-experiment-suite
+bash run_all.sh
+```
 
-## 3. Finding the Results
+##  Data and Algorithms
 
-Once the command has finished, the output CSV files containing the results will be located inside the `results/` folder of each corresponding experiment directory.
+### Datasets
+- **RBD24**: 12 real cybersecurity datasets (desktop/smartphone variants)
+  - OutTLS, NonEnc, Phishing, OutFlash, P2P, Crypto
+  - Automatic download from Zenodo if not present
 
--   Look in **`cl_case1/results/`** for `case1_results.csv`.
--   Look in **`cl_case2/results/`** for `case2_results.csv`.
--   Look in **`online/results/`** for `online_results.csv`.
--   Look in **`batch_learning/results/`** for `batch_learning_results.csv`.
+### OnlineToBatch Algorithms
+1. **PassiveAggressive** - Margin-based online learning
+2. **Perceptron** - Classic classifier  
+3. **GL** - Gradient Learning
+4. **AROW** - Adaptive Regularization of Weight Vectors
+5. **RDA** - Regularized Dual Averaging
+6. **SCW** - Soft Confidence-Weighted learning
+7. **AdaRDA** - Adaptive Regularized Dual Averaging
 
-You can now open these files with Excel, Google Sheets, or any other spreadsheet software to analyze the results.
+### Ensemble Method
+- **WeightedMajorityVoter**: Combines algorithms using recall-based weights
+- Optimizes for False Negative minimization
+- Critical for cybersecurity threat detection
 
-## 4. Troubleshooting Common Issues
+## Results and Analysis
 
--   **Error: `docker: The term 'docker' is not recognized...`**
-    This means Docker is not installed or the Docker Desktop application is not running.
-    1.  **Check:** Is the Docker Desktop application open and the whale icon stable?
-    2.  **Restart Terminal:** Close your current terminal and open a brand new one. This usually fixes the issue after a fresh installation.
+Results are automatically saved to `master-experiment-suite/batch/results/`:
+- `onlinetobatch_individual_results.csv` - Individual algorithm performance
+- `onlinetobatch_ensemble_comparison.csv` - Ensemble vs best individual comparison
 
--   **Error: `'docker-compose' is not recognized...` or `'compose' is not a docker command`**
-    This is a common issue with different Docker versions.
-    **Try the other command syntax.** If `docker-compose up --build` failed, try `docker compose up --build` (without the hyphen), or vice-versa. One of them will work.
+### Key Metrics
+- **FNR** (False Negative Rate) - Primary optimization target
+- **FPR** (False Positive Rate) - Secondary consideration
+- **Recall** - Inverse of FNR, maximized for threat detection
+- **Accuracy** - Overall correctness
 
--   **Download Fails**
-    Ensure you have a stable internet connection. If the Zenodo link is down, you may need to check the `ZENODO_ARCHIVE_URL` variable in the relevant Python script (`tacl_sim.py`, etc.).
+## Architecture
 
-Contributions are welcome. If you encounter any bugs, have feature requests, or wish to contribute code, please feel free to open an issue or submit a pull request on the GitHub repository.
+### OnlineToBatch Protocol Flow
+1. **Data Loading** - RBD24 datasets with user-based splitting
+2. **Training Loop** - For each algorithm and epoch:
+   - Shuffle training data
+   - Train algorithm incrementally  
+   - Validate on held-out data
+   - Save best weights based on recall
+3. **Ensemble Creation** - WeightedMajorityVoter with recall-based weighting
+4. **Evaluation** - Test on unseen data, compare individual vs ensemble
+
+### Directory Structure
+```
+extreme-xp/
+├── README.md                         # Comprehensive project documentation
+└── master-experiment-suite/
+    ├── .gitignore                   # Git ignore patterns
+    ├── docker-compose.yaml          # Docker orchestration
+    ├── run_all.sh                   # Run all experiments sequentially
+    ├── run_batch.sh                 # OnlineToBatch experiments  
+    ├── run_continual.sh             # Continual learning experiments
+    ├── run_online.sh                # Online learning experiments
+    ├── batch/                       # OnlineToBatch experiments
+    │   ├── Dockerfile               # Docker container configuration
+    │   ├── requirements.txt         # Python dependencies
+    │   ├── src/
+    │   │   ├── batch_sim.py        # Main OnlineToBatch experiment
+    │   │   └── data_handler.py     # RBD24 data loading utilities
+    │   ├── results/                # Experiment output files
+    │   └── cyber/                  # RBD24 datasets (auto-downloaded)
+    ├── cl_case1/                   # Continual Learning Case 1
+    │   ├── Dockerfile               # Docker container configuration
+    │   ├── requirements.txt         # Python dependencies
+    │   ├── src/
+    │   │   ├── case1_sim.py        # Main continual learning experiment
+    │   │   ├── algorithms.py       # Algorithm implementations
+    │   │   ├── data_handler.py     # Data loading utilities
+    │   │   ├── evaluation.py       # Performance evaluation
+    │   │   └── [other experiment files]
+    │   ├── results/                # Experiment output files
+    │   └── cyber/                  # RBD24 datasets (auto-downloaded)
+    ├── cl_case2/                   # Continual Learning Case 2
+    │   ├── Dockerfile               # Docker container configuration
+    │   ├── requirements.txt         # Python dependencies
+    │   ├── src/                    # Source code and utilities
+    │   ├── results/                # Experiment output files
+    │   └── cyber/                  # RBD24 datasets (auto-downloaded)
+    └── online/                     # Online Learning experiments
+        ├── Dockerfile               # Docker container configuration
+        ├── requirements.txt         # Python dependencies
+        ├── src/
+        │   ├── online.py           # Main online learning experiment
+        │   └── data_handler.py     # Data loading utilities
+        ├── results/                # Experiment output files
+        └── cyber/                  # RBD24 datasets (auto-downloaded)
+```
+
+## Technical Details
+
+### OnlineToBatch Innovation
+- **Problem**: Online algorithms sensitive to data order, batch algorithms ignore temporal patterns
+- **Solution**: Hybrid approach with controlled stochasticity via epoch shuffling
+- **Validation**: Hold-out data prevents overfitting while optimizing for recall
+- **Ensemble**: Weighted combination based on individual algorithm strengths
+
+
+## Key Features
+
+- Implementation with 7 algorithms
+- Real datasets (RBD24 - 12 variants)  
+- False Negative optimization via recall-focused ensemble
+- Documentation and clean code structure
+- Comprehensive results with detailed FNR/FPR analysis
+- Automatic data handling with Zenodo downloads
+---
+
+Sequential learning scenarios:
+- Case 1: Standard continual learning with forgetting analysis
+- Case 2: Advanced continual adaptation
+- Catastrophic forgetting mitigation techniques
+- Per-task performance tracking
+
+### 4. Online Learning
+**Location**: `online/` directory
+
+Real-time adaptive learning:
+- Stream-based algorithm updates
+- Immediate adaptation to new threats
+- Minimal computational overhead
+- Suitable for production deployment
+
+### Experiments
+
+**Run all experiments:**
+```bash
+bash run_all.sh
+```
+
+**Run specific experiment:**
+```bash
+bash run_batch.sh      # Batch learning
+bash run_continual.sh  # Continual learning  
+bash run_online.sh     # Online learning
+```
+

@@ -10,10 +10,15 @@ ENV/
 env.bak/
 venv.bak/
 
-# Data files (large datasets)
-cyber/*.parquet
-cyber/*.pkl
-cyber/*.zip
+# Data files (large datasets) - exclude from all cyber directories
+**/cyber/*.parquet
+**/cyber/*.pkl
+**/cyber/*.zip
+**/cyber/*.csv
+**/cyber/*.xlsx
+**/cyber/*.json
+**/cyber/*.h5
+**/cyber/*.hdf5
 *.csv
 *.xlsx
 
