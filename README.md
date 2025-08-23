@@ -46,23 +46,6 @@ Results are automatically saved to `master-experiment-suite/batch/results/`:
 - `onlinetobatch_individual_results.csv` - Individual algorithm performance
 - `onlinetobatch_ensemble_comparison.csv` - Ensemble vs best individual comparison
 
-### Key Metrics
-- **FNR** (False Negative Rate) - Primary optimization target
-- **FPR** (False Positive Rate) - Secondary consideration
-- **Recall** - Inverse of FNR, maximized for threat detection
-- **Accuracy** - Overall correctness
-
-## Architecture
-
-### OnlineToBatch Protocol Flow
-1. **Data Loading** - RBD24 datasets with user-based splitting
-2. **Training Loop** - For each algorithm and epoch:
-   - Shuffle training data
-   - Train algorithm incrementally  
-   - Validate on held-out data
-   - Save best weights based on recall
-3. **Ensemble Creation** - WeightedMajorityVoter with recall-based weighting
-4. **Evaluation** - Test on unseen data, compare individual vs ensemble
 
 ### Directory Structure
 ```
@@ -109,24 +92,6 @@ extreme-xp/
         ├── results/                # Experiment output files
         └── cyber/                  # RBD24 datasets (auto-downloaded)
 ```
-
-## Technical Details
-
-### OnlineToBatch Innovation
-- **Problem**: Online algorithms sensitive to data order, batch algorithms ignore temporal patterns
-- **Solution**: Hybrid approach with controlled stochasticity via epoch shuffling
-- **Validation**: Hold-out data prevents overfitting while optimizing for recall
-- **Ensemble**: Weighted combination based on individual algorithm strengths
-
-
-## Key Features
-
-- Implementation with 7 algorithms
-- Real datasets (RBD24 - 12 variants)  
-- False Negative optimization via recall-focused ensemble
-- Documentation and clean code structure
-- Comprehensive results with detailed FNR/FPR analysis
-- Automatic data handling with Zenodo downloads
 
 ## Experiments
 
