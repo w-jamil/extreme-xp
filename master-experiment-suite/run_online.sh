@@ -19,7 +19,7 @@ sudo docker-compose build online-experiment
 
 # Run only the online experiment using docker-compose run (avoids container recreation issues)
 echo "Starting online learning experiment..."
-sudo docker-compose run --rm online-experiment python /app/src/online.py
+sudo docker-compose run --rm online-experiment python online.py
 
 echo ""
 echo "======================================================"
