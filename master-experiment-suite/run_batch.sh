@@ -1,51 +1,36 @@
 #!/bin/bash
 
 echo "======================================================"
-echo "EXTREME-XP: Batch Learning Experiments"
+echo "EXTREME-XP: OnlineToBatch Learning Experiments"
 echo "======================================================"
-echo "Choose your experiment type:"
-echo ""
-echo "1. OnlineToBatch Protocol (Recommended)"
-echo "   - 7 algorithms with weighted majority voting"
-echo "   - Focus on minimizing false negatives"
-echo "   - Comprehensive ensemble analysis"
-echo ""
-echo "2. AROW Comparison"
-echo "   - Plain AROW vs AROW + RF Ensemble"
-echo "   - Data denoising and feature selection"
-echo "   - FNR/FPR cybersecurity analysis"
+echo "Running OnlineToBatch Protocol:"
+echo "- 7 algorithms with weighted majority voting"
+echo "- Focus on minimizing false negatives"
+echo "- Comprehensive ensemble analysis"
+echo "- RBD24 cybersecurity datasets + MNIST binary classification"
 echo ""
 
-read -p "Enter your choice (1 or 2, default=1): " choice
-choice=${choice:-1}
-
-if [ "$choice" = "1" ]; then
-    echo "======================================================"
-    echo "Running OnlineToBatch Protocol Experiment"
-    echo "======================================================"
-    cd batch/src
-    python batch_sim.py online-to-batch
-    cd ../..
-elif [ "$choice" = "2" ]; then
-    echo "======================================================"
-    echo "Running AROW Comparison Experiment"
-    echo "======================================================"
-    cd batch/src
-    python batch_sim.py
-    cd ../..
-else
-    echo "Invalid choice. Running default OnlineToBatch experiment..."
-    cd batch/src
-    python batch_sim.py online-to-batch
-    cd ../..
-fi
+echo "======================================================"
+echo "Experiment 1: RBD24 Cybersecurity Datasets"
+echo "======================================================"
+cd batch/src
+echo "Running batch simulation with RBD24 cybersecurity datasets..."
+/home/wjamil/Documents/venv/bin/python batch_sim.py
 
 echo ""
 echo "======================================================"
-echo "Batch Learning Experiment Complete!"
+echo "Experiment 2: MNIST Binary Classification"
+echo "======================================================"
+echo "Running MNIST even/odd digit classification experiment..."
+/home/wjamil/Documents/venv/bin/python mnist_sim.py
+cd ../..
+
+echo ""
+echo "======================================================"
+echo "OnlineToBatch Learning Experiments Complete!"
 echo "======================================================"
 echo "Results saved to: ./batch/results/"
 echo "Files generated:"
-echo "- onlinetobatch_individual_results.csv"
-echo "- onlinetobatch_ensemble_comparison.csv"
+echo "- RBD24 Cybersecurity: onlinetobatch_individual_results.csv"
+echo "- MNIST: mnist_binary_even_odd.csv"
 echo "======================================================"

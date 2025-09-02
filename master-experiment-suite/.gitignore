@@ -11,6 +11,7 @@ env.bak/
 venv.bak/
 
 # Data files (large datasets) - exclude from all cyber directories
+**/cyber/
 **/cyber/*.parquet
 **/cyber/*.pkl
 **/cyber/*.zip
@@ -22,11 +23,18 @@ venv.bak/
 *.csv
 *.xlsx
 
-# Results and outputs
+# Results and outputs - exclude all results directories
+**/results/
 **/results/*.csv
 **/results/*.png
 **/results/*.jpg
 **/results/*.pdf
+
+# Data directories - exclude all data directories
+**/data/
+data/
+cyber/
+results/
 
 # Docker
 .dockerignore

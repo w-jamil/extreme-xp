@@ -1,0 +1,59 @@
+# Generated data and results directories
+cyber/
+data/
+results/
+**/cyber/
+**/data/
+**/results/
+
+# Large dataset files
+*.parquet
+*.pkl
+*.zip
+*.h5
+*.hdf5
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
+temp/
+tmp/
+*.backup
+*.bak
+*_old
+*_copy
+
+# Docker
+.dockerignore
+
+# Large CSV files (except small config files)
+*.csv
+!*config*.csv
+!*sample*.csv
