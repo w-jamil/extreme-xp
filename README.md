@@ -73,6 +73,7 @@ extreme-xp/
 ├── README.md                         # Comprehensive project documentation
 ├── .gitignore                       # Git ignore patterns for datasets/results
 └── master-experiment-suite/
+    ├── algorithmic_allocation       # Scripts (experiment)
     ├── regression_experiments       # Scripts and csv files (experiment results)
     ├── .gitignore                   # Additional ignore patterns
     ├── docker-compose.yaml          # Docker orchestration for all experiments
