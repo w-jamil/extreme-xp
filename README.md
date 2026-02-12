@@ -14,10 +14,10 @@ A comprehensive machine learning experiment suite featuring **Batch Learning**, 
 **Location**: `batch/` directory
 
 Novel hybrid approach that combines online learning benefits with batch validation:
-- **Algorithms**: 7 algorithms (PassiveAggressive, Perceptron, GradientLearning, AROW, RDA, SCW, AdaRDA)
+- **Algorithms**: Regression and classification algorithms
 - **Approach**: Epoch-based training with data shuffling for stochasticity
 - **Validation**: Held-out data to select optimal model weights
-- **Datasets**: All RBD24 cybersecurity datasets + MNIST binary classification
+- **Datasets**: Simulated + Financial + cybersecurity + Image datasets for experimentation
 
 ### 2. Continual Learning
 **Locations**: `cl_case1/` and `cl_case2/` directories
