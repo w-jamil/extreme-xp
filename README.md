@@ -1,12 +1,6 @@
 # Extreme-XP: Machine Learning Experiment Suite
 
-A comprehensive machine learning experiment suite featuring **Batch Learning**, **Continual Learning**, and **Online Learning** approaches. This suite implements multiple machine learning paradigms using three types of datasets: **RBD24 cybersecurity datasets**, **Kaggle credit card fraud detection**, and **MNIST handwritten digits**.
-
-## Available Datasets
-
-- **RBD24 Cybersecurity Datasets**: 12 cybersecurity datasets automatically downloaded from Zenodo
-- **Kaggle Credit Card Fraud**: Credit card fraud detection dataset from Kaggle
-- **MNIST Handwritten Digits**: Binary classification tasks (even vs odd digits)
+A comprehensive machine learning experiment suite featuring **Batch Learning**, **Continual Learning**, and **Online Learning** approaches. This suite implements multiple machine learning paradigms.
 
 ## Experiment Types
 
