@@ -1,6 +1,6 @@
 # Extreme-XP: Machine Learning Experiment Suite
 
-A comprehensive machine learning experiment suite featuring **Batch Learning**, **Continual Learning**, and **Online Learning** approaches. This suite implements multiple machine learning paradigms.
+A comprehensive machine learning experiment suite featuring **Batch Learning**, **Continual Learning**, and **Online Learning** approaches. This suite implements multiple machine learning paradigms on simulated, financial, cybersecurity and image dataset(s).
 
 ## Experiment Types
 
@@ -11,7 +11,6 @@ Novel hybrid approach that combines online learning benefits with batch validati
 - **Algorithms**: Regression and classification algorithms
 - **Approach**: Epoch-based training with data shuffling for stochasticity
 - **Validation**: Held-out data to select optimal model weights
-- **Datasets**: Simulated + Financial + cybersecurity + Image datasets for experimentation
 
 ### 2. Continual Learning
 **Locations**: `cl_case1/` and `cl_case2/` directories
