@@ -16,18 +16,18 @@ Novel hybrid approach that combines online learning benefits with batch validati
 **Locations**: `cl_case1/` and `cl_case2/` directories
 
 Sequential learning with catastrophic forgetting mitigation:
-- **Algorithms**: 7 algorithms (PassiveAggressive, Perceptron, GradientLearning, AROW, RDA, SCW, AdaRDA)
+- **Algorithms**: Regression and classification algorithms
 - **Case 1**: Task-agnostic continual learning approach
 - **Case 2**: Sliding window continual learning paradigm  
-- **Datasets**: All RBD24 cybersecurity datasets processed sequentially
+
 
 ### 3. Online Learning  
 **Location**: `online/` directory
 
 Online data processing:
-- **Algorithms**: 7 algorithms (PassiveAggressive, Perceptron, GradientLearning, AROW, RDA, SCW, AdaRDA)
+- **Algorithms**: Regression and classification algorithms
 - **Approach**: Adaptive learning from data streams
-- **Datasets**: All RBD24 cybersecurity datasets + Kaggle credit card fraud
+
 
 
 ## How to Run Experiments
@@ -42,23 +42,10 @@ bash run_all.sh
 
 **Run specific experiment types:**
 ```bash
-bash run_batch.sh      # OnlineToBatch learning (RBD24 + MNIST)
-bash run_continual.sh  # Continual learning (both cases)  
-bash run_online.sh     # Online learning (RBD24 + Kaggle)
+bash run_batch.sh      
+bash run_continual.sh  
+bash run_online.sh    
 ```
-
-## Results and Analysis
-
-Results are automatically saved to respective `results/` directories:
-- **OnlineToBatch**: `batch/results/`
-  - `onlinetobatch_individual_results.csv` - RBD24 cybersecurity results
-  - `mnist_binary_even_odd.csv` - MNIST binary classification results
-- **Continual Learning**: `cl_case1/results/` and `cl_case2/results/`
-  - `cl_case1_results.csv` - Task-agnostic continual learning
-  - `cl_case2_results.csv` - Sliding window continual learning
-- **Online Learning**: `online/results/`
-  - `online_results.csv` - RBD24 + Kaggle fraud detection results
-
 
 ### Directory Structure
 ```
