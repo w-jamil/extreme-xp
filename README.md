@@ -65,13 +65,13 @@ extreme-xp/
     │   ├── Dockerfile               # Docker container configuration
     │   ├── requirements.txt         # Python dependencies
     │   ├── src/
-    │   │   ├── batch_sim.py        # RBD24 cybersecurity experiments
-    │   │   ├── mnist_sim.py        # MNIST binary classification
+    │   │   ├── batch_sim.py        # cybersecurity experiments
+    │   │   ├── mnist_sim.py        # binary classification
     │   │   ├── hybrid_sim.py       # Hybrid learning approaches
     │   │   ├── algorithms.py       # Algorithm implementations
     │   │   └── data_handler.py     # Data loading utilities
     │   ├── results/                # Generated experiment results
-    │   └── cyber/                  # RBD24 datasets (auto-downloaded)
+    │   └── cyber/                  # datasets (auto-downloaded)
     ├── cl_case1/                   # Continual Learning Case 1 
     │   ├── Dockerfile               # Docker container configuration
     │   ├── requirements.txt         # Python dependencies
@@ -83,7 +83,7 @@ extreme-xp/
     │   │   ├── evaluation.py       # Performance evaluation
     │   │   └── [additional experiment files]
     │   ├── results/                # Generated experiment results
-    │   └── cyber/                  # RBD24 datasets (auto-downloaded)
+    │   └── cyber/                  # datasets (auto-downloaded)
     ├── cl_case2/                   # Continual Learning Case 2
     │   ├── Dockerfile               # Docker container configuration
     │   ├── requirements.txt         # Python dependencies
@@ -91,7 +91,7 @@ extreme-xp/
     │   │   ├── case2_sim.py        # Sliding window continual learning
     │   │   └── [supporting files]
     │   ├── results/                # Generated experiment results
-    │   └── cyber/                  # RBD24 datasets (auto-downloaded)
+    │   └── cyber/                  # datasets (auto-downloaded)
     └── online/                     # Online Learning
         ├── Dockerfile               # Docker container configuration
         ├── requirements.txt         # Python dependencies
