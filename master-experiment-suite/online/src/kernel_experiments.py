@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
 """
-Vectorized Kernel Classification Experiments
-- Credit Fraud: Time-based split (80/20 temporal)
-- MNIST: Random shuffle split (80/20)
-
 Uses efficient vectorized kernel computations with configurable support vector budget.
 """
 
@@ -11,6 +7,7 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
+import matplotlib.pyplot as plt
 import time
 import os
 
@@ -92,6 +89,13 @@ class KernelPerceptron:
         self.alpha = alpha[sv_mask]
         return self
     
+    def decision_function(self, X):
+        """Return raw decision scores for ROC curves."""
+        if self.support_vectors is None or len(self.support_vectors) == 0:
+            return np.zeros(len(X))
+        K = rbf_kernel_matrix(X, self.support_vectors, self.gamma)
+        return K @ self.alpha
+    
     def predict(self, X):
         if self.support_vectors is None or len(self.support_vectors) == 0:
             return np.ones(len(X))
@@ -154,6 +158,13 @@ class KernelPassiveAggressive:
             self.support_vectors = np.array([]).reshape(0, X.shape[1])
             self.alpha = np.array([])
         return self
+    
+    def decision_function(self, X):
+        """Return raw decision scores for ROC curves."""
+        if self.support_vectors is None or len(self.support_vectors) == 0:
+            return np.zeros(len(X))
+        K = rbf_kernel_matrix(X, self.support_vectors, self.gamma)
+        return K @ self.alpha
     
     def predict(self, X):
         if self.support_vectors is None or len(self.support_vectors) == 0:
@@ -241,6 +252,13 @@ class KernelAROW:
             self.support_vectors = np.array([]).reshape(0, X.shape[1])
             self.alpha = np.array([])
         return self
+    
+    def decision_function(self, X):
+        """Return raw decision scores for ROC curves."""
+        if self.support_vectors is None or len(self.support_vectors) == 0:
+            return np.zeros(len(X))
+        K = rbf_kernel_matrix(X, self.support_vectors, self.gamma)
+        return K @ self.alpha
     
     def predict(self, X):
         if self.support_vectors is None or len(self.support_vectors) == 0:
@@ -332,6 +350,13 @@ class KernelOGL:
             self.alpha = np.array([])
         return self
     
+    def decision_function(self, X):
+        """Return raw decision scores for ROC curves."""
+        if self.support_vectors is None or len(self.support_vectors) == 0:
+            return np.zeros(len(X))
+        K = rbf_kernel_matrix(X, self.support_vectors, self.gamma)
+        return K @ self.alpha
+    
     def predict(self, X):
         if self.support_vectors is None or len(self.support_vectors) == 0:
             return np.ones(len(X))
@@ -413,6 +438,13 @@ class KernelRDA:
             self.support_vectors = np.array([]).reshape(0, X.shape[1])
             self.alpha = np.array([])
         return self
+    
+    def decision_function(self, X):
+        """Return raw decision scores for ROC curves."""
+        if self.support_vectors is None or len(self.support_vectors) == 0:
+            return np.zeros(len(X))
+        K = rbf_kernel_matrix(X, self.support_vectors, self.gamma)
+        return K @ self.alpha
     
     def predict(self, X):
         if self.support_vectors is None or len(self.support_vectors) == 0:
@@ -509,6 +541,13 @@ class KernelSCW:
             self.alpha = np.array([])
         return self
     
+    def decision_function(self, X):
+        """Return raw decision scores for ROC curves."""
+        if self.support_vectors is None or len(self.support_vectors) == 0:
+            return np.zeros(len(X))
+        K = rbf_kernel_matrix(X, self.support_vectors, self.gamma)
+        return K @ self.alpha
+    
     def predict(self, X):
         if self.support_vectors is None or len(self.support_vectors) == 0:
             return np.ones(len(X))
@@ -596,12 +635,82 @@ class KernelAdaRDA:
             self.alpha = np.array([])
         return self
     
+    def decision_function(self, X):
+        """Return raw decision scores for ROC curves."""
+        if self.support_vectors is None or len(self.support_vectors) == 0:
+            return np.zeros(len(X))
+        K = rbf_kernel_matrix(X, self.support_vectors, self.gamma)
+        return K @ self.alpha
+    
     def predict(self, X):
         if self.support_vectors is None or len(self.support_vectors) == 0:
             return np.ones(len(X))
         K = rbf_kernel_matrix(X, self.support_vectors, self.gamma)
         scores = K @ self.alpha
         return np.where(scores >= 0, 1, -1)
+
+
+# =============================================================================
+# F1 SCORE PLOTTING (PER SHUFFLE)
+# =============================================================================
+
+def plot_f1_scores(f1_data, dataset_name, output_path=None, highlight='K-OGL'):
+    """
+    Plot F1 scores for each shuffle across all algorithms.
+    
+    Args:
+        f1_data: Dict mapping algorithm name to list of F1 scores (one per shuffle)
+        dataset_name: Name of dataset for the title
+        output_path: Path to save figure (None = show only)
+        highlight: Algorithm to highlight (default: K-OGL)
+    """
+    plt.figure(figsize=(12, 6))
+    
+    # Style settings for each algorithm
+    styles = {
+        'K-OGL': {'color': '#e41a1c', 'linewidth': 2.5, 'linestyle': '-', 'marker': 'o', 'markersize': 3},
+        'K-Perceptron': {'color': '#377eb8', 'linewidth': 1.0, 'linestyle': '--', 'marker': '', 'markersize': 0},
+        'K-PA': {'color': '#4daf4a', 'linewidth': 1.0, 'linestyle': '--', 'marker': '', 'markersize': 0},
+        'K-AROW': {'color': '#984ea3', 'linewidth': 1.0, 'linestyle': '-.', 'marker': '', 'markersize': 0},
+        'K-RDA': {'color': '#ff7f00', 'linewidth': 1.0, 'linestyle': '-.', 'marker': '', 'markersize': 0},
+        'K-SCW': {'color': '#a65628', 'linewidth': 1.0, 'linestyle': ':', 'marker': '', 'markersize': 0},
+        'K-AdaRDA': {'color': '#f781bf', 'linewidth': 1.0, 'linestyle': ':', 'marker': '', 'markersize': 0},
+    }
+    
+    n_shuffles = len(list(f1_data.values())[0])
+    x = np.arange(1, n_shuffles + 1)
+    
+    # Plot each algorithm
+    for name, f1_scores in f1_data.items():
+        style = styles.get(name, {'color': 'gray', 'linewidth': 1, 'linestyle': '--', 'marker': '', 'markersize': 0})
+        
+        if name == highlight:
+            plt.plot(x, f1_scores, label=f'{name} (mean={np.mean(f1_scores):.4f})',
+                     color=style['color'], linewidth=style['linewidth'], 
+                     linestyle=style['linestyle'], marker=style['marker'],
+                     markersize=style['markersize'], zorder=10, alpha=0.9)
+        else:
+            plt.plot(x, f1_scores, label=f'{name} (mean={np.mean(f1_scores):.4f})',
+                     color=style['color'], linewidth=style['linewidth'],
+                     linestyle=style['linestyle'], alpha=0.6)
+    
+    plt.xlabel('Shuffle Number', fontsize=12)
+    plt.ylabel('F1 Score', fontsize=12)
+    plt.title(f'F1 Scores Across Shuffles - {dataset_name}\n(K-OGL highlighted)', fontsize=14)
+    plt.legend(loc='lower right', fontsize=9)
+    plt.grid(True, alpha=0.3)
+    plt.xlim(1, n_shuffles)
+    plt.ylim(0, 1.0)
+    plt.tight_layout()
+    
+    if output_path:
+        plt.savefig(output_path, dpi=150, bbox_inches='tight')
+        print(f"F1 plot saved to: {output_path}")
+    else:
+        plt.show()
+    
+    plt.close()
+
 
 
 # =============================================================================
@@ -1024,6 +1133,7 @@ def run_repeated_experiments(n_repeats=10, gamma='tune', max_sv=500, epochs=3, t
         dataset_list = [(d, s) for d, s in ALL_DATASETS if d in datasets]
     
     all_results = []
+    per_shuffle_results = []
     
     for dataset_name, split_type in dataset_list:
         print("\n" + "=" * 70)
@@ -1131,6 +1241,15 @@ def run_repeated_experiments(n_repeats=10, gamma='tune', max_sv=500, epochs=3, t
                 'SVs_mean': sv_mean,
                 'N_repeats': n_repeats,
             })
+            
+            # Store per-shuffle F1 scores for line plots
+            for rep_idx, f1_val in enumerate(algo_metrics[name]['F1']):
+                per_shuffle_results.append({
+                    'Dataset': dataset_name,
+                    'Algorithm': name,
+                    'Shuffle': rep_idx + 1,
+                    'F1': f1_val,
+                })
     
     # Save results
     df_results = pd.DataFrame(all_results)
@@ -1139,6 +1258,58 @@ def run_repeated_experiments(n_repeats=10, gamma='tune', max_sv=500, epochs=3, t
     output_path = os.path.join(results_dir, 'kernel_repeated_results.csv')
     df_results.to_csv(output_path, index=False, float_format='%.4f')
     print(f"\nResults saved to: {output_path}")
+    
+    # Save per-shuffle F1 scores
+    df_per_shuffle = pd.DataFrame(per_shuffle_results)
+    per_shuffle_path = os.path.join(results_dir, 'kernel_per_shuffle_f1.csv')
+    df_per_shuffle.to_csv(per_shuffle_path, index=False, float_format='%.4f')
+    print(f"Per-shuffle F1 saved to: {per_shuffle_path}")
+    
+    # Generate F1 line plots for each dataset
+    algo_colors = {
+        'K-OGL': '#e41a1c',      # Red - highlighted
+        'K-Perceptron': '#377eb8',
+        'K-PA': '#4daf4a',
+        'K-AROW': '#984ea3',
+        'K-RDA': '#ff7f00',
+        'K-SCW': '#a65628',
+        'K-AdaRDA': '#f781bf',
+    }
+    
+    for dataset_name, _ in dataset_list:
+        df_ds = df_per_shuffle[df_per_shuffle['Dataset'] == dataset_name]
+        
+        fig, ax = plt.subplots(figsize=(12, 6))
+        
+        algorithms = df_ds['Algorithm'].unique()
+        for algo in algorithms:
+            df_algo = df_ds[df_ds['Algorithm'] == algo].sort_values('Shuffle')
+            color = algo_colors.get(algo, 'gray')
+            linewidth = 3 if algo == 'K-OGL' else 1.5
+            alpha = 1.0 if algo == 'K-OGL' else 0.7
+            zorder = 10 if algo == 'K-OGL' else 1
+            
+            # Compute running average
+            f1_values = df_algo['F1'].values
+            running_avg = np.cumsum(f1_values) / np.arange(1, len(f1_values) + 1)
+            
+            ax.plot(df_algo['Shuffle'], running_avg, 
+                   label=algo, color=color, linewidth=linewidth, 
+                   alpha=alpha, zorder=zorder)
+        
+        ax.set_xlabel('Shuffle', fontsize=12)
+        ax.set_ylabel('Running Average F1 Score', fontsize=12)
+        ax.set_title(f'Running Average F1 Score - {dataset_name}\n(K-OGL highlighted)', fontsize=14)
+        ax.legend(loc='lower right', fontsize=10)
+        ax.grid(True, alpha=0.3)
+        ax.set_xlim(1, n_repeats)
+        ax.set_ylim(0, 1.0)
+        
+        plt.tight_layout()
+        plot_path = os.path.join(results_dir, f'f1_running_avg_{dataset_name}.png')
+        plt.savefig(plot_path, dpi=150, bbox_inches='tight')
+        print(f"Plot saved: {plot_path}")
+        plt.close()
     
     return df_results
 
@@ -1316,35 +1487,21 @@ if __name__ == "__main__":
     parser.add_argument('--gamma', type=str, default='tune', help='RBF gamma (float, "auto", or "tune")')
     parser.add_argument('--max-sv', type=int, default=1000, help='Max support vectors')
     parser.add_argument('--epochs', type=int, default=3, help='Training epochs')
-    parser.add_argument('--subsample', type=int, default=10000, help='Subsample dataset (0 for full)')
-    parser.add_argument('--max-train', type=int, default=15000, help='Max training samples (memory limit)')
     parser.add_argument('--datasets', type=str, nargs='+', default=None, 
                         help='Specific datasets to run (default: all)')
-    parser.add_argument('--repeats', type=int, default=10, help='Number of random shuffle repeats')
+    parser.add_argument('--repeats', type=int, default=100, help='Number of random shuffle repeats')
     parser.add_argument('--test-ratio', type=float, default=0.3, help='Test set fraction (default: 0.3 = 70/30 split)')
-    parser.add_argument('--mode', type=str, default='repeated', choices=['single', 'repeated'],
-                        help='Run mode: single run or repeated with averaging')
     
     args = parser.parse_args()
     
     gamma = args.gamma if args.gamma in ('auto', 'tune') else float(args.gamma)
-    subsample = args.subsample if args.subsample > 0 else None
     
-    if args.mode == 'repeated':
-        run_repeated_experiments(
-            n_repeats=args.repeats,
-            gamma=gamma,
-            max_sv=args.max_sv,
-            epochs=args.epochs,
-            test_ratio=args.test_ratio,
-            datasets=args.datasets
-        )
-    else:
-        run_experiments(
-            gamma=gamma,
-            max_sv=args.max_sv,
-            epochs=args.epochs,
-            subsample=subsample,
-            max_train=args.max_train,
-            datasets=args.datasets
-        )
+    # Run experiments with F1 per-shuffle saved and plots generated
+    run_repeated_experiments(
+        n_repeats=args.repeats,
+        gamma=gamma,
+        max_sv=args.max_sv,
+        epochs=args.epochs,
+        test_ratio=args.test_ratio,
+        datasets=args.datasets
+    )
