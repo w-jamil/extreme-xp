@@ -69,8 +69,9 @@ The `caml-initial-study/` directory contains the codebase for **Deliverable 3.2*
 
 ---
 
-## Citation
+## Related working papers
 
-> **Jamil, W.** and Bouchachia, A. Online Gradient-based Learning. *In progress.*
+* **Jamil, W.** and Bouchachia, A. Online Gradient-based Learning. *In progress.*
+* **Jamil, W.** and Bouchachia, A. Online learning with Delayed & Batched feedback. *In progress.*
 
 ---
