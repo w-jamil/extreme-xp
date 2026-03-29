@@ -1,6 +1,6 @@
 # Constraint-Aware Machine Learning
 
-Constraint-aware machine learning derives the learning algorithm from a constrained optimisation problem. This repository contains experiments spanning three learning paradigms — batch, continual, and online — with ongoing research into online learning under delayed and batched feedback.
+Constraint-aware machine learning derives the learning algorithm from a constrained optimisation problem. This repository contains experiments spanning three learning paradigms — batch, continual, and online — with ongoing research into delayed and batched feedback constraints in online learning.
 
 ---
 
