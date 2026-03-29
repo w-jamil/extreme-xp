@@ -87,7 +87,7 @@ def prepare_data_from_zenodo(zenodo_archive_url, target_dir):
                                 print(f"      Progress: {downloaded_size / 1024**2:.2f} / {total_size / 1024**2:.2f} MB ({progress:.1f}%)", end='\r')
                                 start_time = time.time()
                 
-                print(f"\n      ✓ Downloaded: {file_info['name']}")
+                print(f"\n       Downloaded: {file_info['name']}")
         
         print(f"\n--> Successfully downloaded all {len(parquet_files)} parquet files to '{target_dir}'")
         return True
