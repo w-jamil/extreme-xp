@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NIDS Simulation Dashboard</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+            background-color: #f4f6f9; 
+            color: #333; 
+            margin: 0; 
+            padding: 20px; 
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            grid-template-rows: auto auto 1fr; 
+            gap: 20px; 
+            grid-template-areas: 
+                "header header" 
+                "metrics alerts" 
+                "logs alerts"; 
+        }
+        .card { 
+            background-color: #fff; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05); 
+            padding: 20px; 
+        }
+        #header { 
+            grid-area: header; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+        }
+        #metrics { grid-area: metrics; }
+        #alerts-card { 
+            grid-area: alerts; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        #logs-card { 
+            grid-area: logs; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        h1, h2 { 
+            color: #1a253c; 
+            margin-top: 0; 
+        }
+        h1 { font-size: 1.8em; }
+        h2 { 
+            font-size: 1.4em; 
+            border-bottom: 2px solid #eef; 
+            padding-bottom: 10px; 
+        }
+        .controls label { 
+            font-weight: bold; 
+            margin-right: 10px; 
+        }
+        .controls select, .controls button { 
+            padding: 10px 15px; 
+            border-radius: 5px; 
+            border: 1px solid #ccc; 
+            font-size: 1em; 
+        }
+        .controls button { 
+            background-color: #007bff; 
+            color: white; 
+            cursor: pointer; 
+            border-color: #007bff; 
+        }
+        .controls button:disabled { 
+            background-color: #a0cfff; 
+            cursor: not-allowed; 
+        }
+        .controls #pause-button { 
+            background-color: #dc3545; 
+            border-color: #dc3545; 
+        }
+        .controls #pause-button.resume {
+            background-color: #ffc107; 
+            border-color: #ffc107; 
+            color: #212529;
+        }
+        .controls #new-button { 
+            background-color: #28a745; 
+            border-color: #28a745; 
+        }
+        #progress-bar-container { 
+            width: 100%; 
+            background-color: #e9ecef; 
+            border-radius: 5px; 
+            margin-top: 15px; 
+        }
+        #progress-bar { 
+            width: 0%; 
+            height: 20px; 
+            background-color: #28a745; 
+            border-radius: 5px; 
+            text-align: center; 
+            line-height: 20px; 
+            color: white; 
+            transition: width 0.4s ease; 
+        }
+        .metric-display { 
+            display: flex; 
+            justify-content: space-around; 
+            text-align: center; 
+            margin-top: 20px; 
+        }
+        .metric .value { 
+            font-size: 2em; 
+            font-weight: bold; 
+            display: block; 
+        }
+        .metric .label { 
+            font-size: 0.8em; 
+            color: #6c757d; 
+            text-transform: uppercase; 
+        }
+        .metric-details { 
+            text-align: center; 
+            margin-top: 15px; 
+            font-size: 0.9em; 
+            color: #555; 
+        }
+        .log-container, .alert-container { 
+            flex-grow: 1; 
+            overflow-y: auto; 
+            background-color: #fafafa; 
+            border: 1px solid #eee; 
+            border-radius: 5px; 
+            padding: 10px; 
+        }
+        .log-container {
+            font-family: 'Courier New', Courier, monospace; 
+            font-size: 0.9em;
+        }
+        .log-container p { 
+            margin: 0 0 5px 0; 
+            padding-bottom: 5px; 
+            border-bottom: 1px dotted #ddd; 
+        }
+        
+        /* Alert Box Styles */
+        .alert-box {
+            border-left-width: 5px;
+            border-left-style: solid;
+            border-radius: 4px;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 0.95em;
+        }
+        .alert-box.threat {
+            border-left-color: #dc3545; /* Red for real threats */
+            background-color: #f8d7da;
+        }
+        .alert-box.benign {
+            border-left-color: #ffc107; /* Yellow for false alarms */
+            background-color: #fff3cd;
+        }
+        .alert-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 8px;
+        }
+        .alert-box.threat .forecast-text {
+            color: #842029; /* Dark red text */
+        }
+        .alert-box.benign .forecast-text {
+             color: #664d03; /* Dark yellow text */
+        }
+        .alert-body {
+            font-size: 0.9em;
+        }
+        .alert-body ul {
+            margin: 5px 0 0 0;
+            padding-left: 20px;
+            color: #444;
+        }
+        .alert-body li {
+            margin-bottom: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="header" class="card">
+            <h1>NIDS Simulation Dashboard</h1>
+            <div class="controls">
+                <label for="dataset-select">Dataset:</label>
+                <select id="dataset-select">
+                    <!-- Datasets will be populated by Flask -->
+                    {% for ds in datasets %}
+                        <option value="{{ ds }}">{{ ds }}</option>
+                    {% endfor %}
+                </select>
+                <button id="start-button" onclick="startSimulation()">Start</button>
+                <button id="pause-button" onclick="pauseSimulation()" disabled>Pause</button>
+                <button id="new-button" onclick="newSimulation()" disabled style="display: none;">New Simulation</button>
+            </div>
+        </div>
+
+        <div id="metrics" class="card">
+            <h2>Live Metrics (<span id="sim-status">Idle</span>)</h2>
+            <div id="progress-bar-container">
+                <div id="progress-bar">0%</div>
+            </div>
+            <div class="metric-display">
+                <div class="metric">
+                    <span class="value" id="fnr-value">0.00%</span>
+                    <span class="label">False Negative Rate (FNR)</span>
+                </div>
+                <div class="metric">
+                    <span class="value" id="fpr-value">0.00%</span>
+                    <span class="label">False Positive Rate (FPR)</span>
+                </div>
+            </div>
+            <div class="metric-details">
+                <p>Processed Instances: <strong id="instances-processed">0</strong></p>
+                <p>
+                    Threats Seen: <strong id="total-positives">0</strong> | 
+                    Benign Seen: <strong id="total-negatives">0</strong>
+                </p>
+            </div>
+        </div>
+
+        <div id="logs-card" class="card">
+            <h2>System Logs</h2>
+            <div class="log-container" id="logs"></div>
+        </div>
+
+        <div id="alerts-card" class="card">
+            <h2>Threat Forecasts</h2>
+            <div class="alert-container" id="alerts-container"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- FIX: Receive the feature descriptions dictionary from the Flask backend ---
+        // The `tojson` filter safely converts the Python dict to a JSON string for JavaScript.
+        const featureDescriptions = JSON.parse('{{ descriptions | tojson | safe }}');
+
+        // Helper function to get the human-readable description for a feature.
+        // It falls back to a formatted version of the original name if not found.
+        function getFeatureDescription(featureName) {
+            return featureDescriptions[featureName] || featureName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+        // --- END FIX ---
+
+        let simulationId = null;
+        let statusInterval = null;
+
+        const startButton = document.getElementById('start-button');
+        const pauseButton = document.getElementById('pause-button');
+        const newButton = document.getElementById('new-button');
+        const datasetSelect = document.getElementById('dataset-select');
+        
+        async function startSimulation() {
+            console.log('startSimulation() called - Button text:', startButton.textContent);
+            
+            const selectedDataset = datasetSelect.value;
+            if (!selectedDataset) {
+                alert("Please select a dataset.");
+                return;
+            }
+
+            try {
+                // Stop any existing simulation first (including paused ones)
+                if (simulationId) {
+                    console.log('Stopping existing simulation before starting new one...');
+                    await fetch('/stop-simulation', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ simulation_id: simulationId })
+                    });
+                    
+                    // Wait a moment for cleanup
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    // Clear the previous simulation ID
+                    simulationId = null;
+                    if (statusInterval) {
+                        clearInterval(statusInterval);
+                        statusInterval = null;
+                    }
+                }
+            } catch (error) {
+                console.error('Error stopping previous simulation:', error);
+            }
+
+            try {
+                const response = await fetch('/start-simulation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ dataset: selectedDataset })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    simulationId = data.simulation_id;
+                    startButton.style.display = 'inline-block';
+                    startButton.disabled = true;
+                    pauseButton.disabled = false;
+                    pauseButton.textContent = 'Pause';
+                    pauseButton.classList.remove('resume');
+                    newButton.style.display = 'none';
+                    datasetSelect.disabled = true;
+                    // Clear old data on new run
+                    document.getElementById('logs').innerHTML = '';
+                    document.getElementById('alerts-container').innerHTML = '';
+                    
+                    if (statusInterval) {
+                        clearInterval(statusInterval);
+                    }
+                    statusInterval = setInterval(updateStatus, 1000); // Poll every second
+                    console.log('New simulation started successfully');
+                } else {
+                    alert(`Error: ${data.message}`);
+                }
+            } catch (error) {
+                console.error('Error starting simulation:', error);
+                alert(`Failed to start simulation: ${error.message}`);
+                
+                // Reset buttons on error
+                startButton.style.display = 'inline-block';
+                startButton.disabled = false;
+                pauseButton.disabled = true;
+                pauseButton.textContent = 'Pause';
+                pauseButton.classList.remove('resume');
+                newButton.style.display = 'none';
+                datasetSelect.disabled = false;
+            }
+        }
+
+        async function pauseSimulation() {
+            if (!simulationId) return;
+            
+            console.log('pauseSimulation() called, current button text:', pauseButton.textContent);
+            
+            try {
+                const response = await fetch('/pause-simulation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ simulation_id: simulationId })
+                });
+                
+                const data = await response.json();
+                console.log('Pause/Resume response:', data);
+                
+                if (data.status === 'success') {
+                    if (data.is_paused) {
+                        // Simulation is now paused - hide Start, show Resume and New Simulation
+                        startButton.style.display = 'none';
+                        pauseButton.textContent = 'Resume';
+                        pauseButton.classList.add('resume');
+                        newButton.style.display = 'inline-block';
+                        newButton.disabled = false;
+                        console.log('UI updated: Paused - showing Resume and New Simulation only');
+                    } else {
+                        // Simulation is now running - show disabled Start and enabled Pause
+                        startButton.style.display = 'inline-block';
+                        startButton.disabled = true;
+                        pauseButton.textContent = 'Pause';
+                        pauseButton.classList.remove('resume');
+                        newButton.style.display = 'none';
+                        console.log('UI updated: Running - showing Start (disabled) and Pause');
+                    }
+                }
+            } catch (error) {
+                console.error('Error toggling pause:', error);
+            }
+        }
+
+        async function newSimulation() {
+            console.log('newSimulation() called - stopping current and resetting');
+            
+            if (simulationId) {
+                // Stop current simulation completely
+                try {
+                    await fetch('/stop-simulation', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            simulation_id: simulationId,
+                            action: 'stop'
+                        })
+                    });
+                } catch (error) {
+                    console.error('Error stopping current simulation:', error);
+                }
+                
+                if (statusInterval) {
+                    clearInterval(statusInterval);
+                    statusInterval = null;
+                }
+            }
+            
+            // Reset to initial state
+            simulationId = null;
+            startButton.style.display = 'inline-block';
+            startButton.disabled = false;
+            startButton.textContent = 'Start';
+            pauseButton.disabled = true;
+            pauseButton.textContent = 'Pause';
+            pauseButton.classList.remove('resume');
+            newButton.style.display = 'none';
+            datasetSelect.disabled = false;
+            
+            // Clear all displays
+            document.getElementById('logs').innerHTML = '';
+            document.getElementById('alerts-container').innerHTML = '';
+            document.getElementById('tp-count').textContent = '0';
+            document.getElementById('fp-count').textContent = '0';
+            document.getElementById('fn-count').textContent = '0';
+            document.getElementById('tn-count').textContent = '0';
+            document.getElementById('accuracy').textContent = '0.000';
+            document.getElementById('precision').textContent = '0.000';
+            document.getElementById('recall').textContent = '0.000';
+            
+            console.log('Ready for new simulation - all reset to initial state');
+        }
+
+        async function updateStatus() {
+            if (!simulationId) return;
+
+            const response = await fetch(`/simulation-status?id=${simulationId}`);
+            const data = await response.json();
+
+            if (data.status === 'error') {
+                console.error("Failed to get status:", data.message);
+                clearInterval(statusInterval);
+                return;
+            }
+
+            // Update Progress Bar and Status
+            const progress = (data.progress * 100).toFixed(1);
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+            document.getElementById('progress-bar').textContent = `${progress}%`;
+            document.getElementById('sim-status').textContent = data.status;
+
+            // Update Metrics with raw counts
+            const fnrValue = (data.fnr * 100).toFixed(2);
+            const fprValue = (data.fpr * 100).toFixed(2);
+            const falseNegatives = Math.round(data.fnr * data.total_positives_seen);
+            const falsePositives = Math.round(data.fpr * data.total_negatives_seen);
+            document.getElementById('fnr-value').textContent = `${fnrValue}% (${falseNegatives} FNs)`;
+            document.getElementById('fpr-value').textContent = `${fprValue}% (${falsePositives} FPs)`;
+            document.getElementById('instances-processed').textContent = data.instances_processed;
+            document.getElementById('total-positives').textContent = data.total_positives_seen;
+            document.getElementById('total-negatives').textContent = data.total_negatives_seen;
+
+            // Update Logs
+            const logsDiv = document.getElementById('logs');
+            logsDiv.innerHTML = data.logs.map(log => `<p>${log}</p>`).join('');
+            logsDiv.scrollTop = logsDiv.scrollHeight; // Auto-scroll to bottom
+
+            // ### CORRECTED AND FINAL: UPDATE ALERTS ###
+            const alertsContainer = document.getElementById('alerts-container');
+            alertsContainer.innerHTML = ''; // Clear previous alerts to redraw
+
+            data.alerts.forEach(alert => {
+                const alertBox = document.createElement('div');
+                
+                // Set CSS class based on the forecast text
+                const alertClass = alert.forecast === 'Malicious' ? 'threat' : 'benign';
+                alertBox.className = `alert-box ${alertClass}`;
+                
+                // Build the list of top features using the helper function
+                let featuresHtml = '<strong>Top Influential Features:</strong><ul>';
+                if (alert.top_features) {
+                    alert.top_features.forEach(feature => {
+                        const description = getFeatureDescription(feature.feature);
+                        featuresHtml += `<li>${description} (${feature.percentage.toFixed(1)}%)</li>`;
+                    });
+                }
+                featuresHtml += '</ul>';
+
+                // Construct the full HTML for the alert box
+                alertBox.innerHTML = `
+                    <div class="alert-header">
+                        <span>[${alert.timestamp}]</span>
+                        <span class="forecast-text">${alert.forecast}</span>
+                    </div>
+                    <div class="alert-body">
+                        ${featuresHtml}
+                    </div>
+                `;
+                alertsContainer.appendChild(alertBox);
+            });
+            // ### END CORRECTION ###
+
+            // Update button states only if needed and don't conflict with user interactions
+            if (data.is_paused && pauseButton.textContent !== 'Resume') {
+                console.log('Server says paused, updating UI to paused state...');
+                startButton.style.display = 'none';
+                pauseButton.textContent = 'Resume';
+                pauseButton.classList.add('resume');
+                pauseButton.disabled = false;
+                newButton.style.display = 'inline-block';
+                newButton.disabled = false;
+            } else if (!data.is_paused && data.status === 'running' && pauseButton.textContent !== 'Pause') {
+                console.log('Server says running, updating UI to running state...');
+                startButton.style.display = 'inline-block';
+                startButton.disabled = true;
+                pauseButton.textContent = 'Pause';
+                pauseButton.classList.remove('resume');
+                pauseButton.disabled = false;
+                newButton.style.display = 'none';
+            }
+
+            // Stop polling if simulation is complete or stopped
+            if (data.status === 'complete' || data.status === 'stopped') {
+                clearInterval(statusInterval);
+                simulationId = null;
+                startButton.style.display = 'inline-block';
+                startButton.disabled = false;
+                startButton.textContent = 'Start';
+                pauseButton.disabled = true;
+                pauseButton.textContent = 'Pause';
+                pauseButton.classList.remove('resume');
+                newButton.style.display = 'none';
+                datasetSelect.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
