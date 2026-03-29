@@ -56,7 +56,7 @@ Then open `http://127.0.0.1:5000` in a browser.
 
 ## Initial Study (Phase 1)
 
-The `caml-initial-study/` directory contains the codebase for **Deliverable 3.2**, which established the baseline for constraint-aware online learning. See `caml-initial-study/README.md` for setup and historical results.
+The `caml-initial-study/` directory preserves the foundational codebase for Deliverable 3.2 (D3.2). This study established the experimental groundwork.
 
 ---
 
