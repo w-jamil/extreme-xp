@@ -118,7 +118,7 @@ def download_and_extract_data():
 # =============================================================================
 # ALGORITHM AND DATA LOADING FUNCTIONS (Unchanged)
 # =============================================================================
-def OGL(X, y, initial_weights, eta=0.1):
+def OGC(X, y, initial_weights, eta=0.1):
     X_np, y_np, w = np.asarray(X), np.asarray(y), initial_weights
     y_pred = np.zeros(len(X_np))
     for i in range(len(X_np)):
@@ -250,7 +250,7 @@ def run_live_threat_detection(simulation_id):
 
         # When not paused: run predictions and update metrics
         current_weights = sim_instance.weights
-        new_weights, y_pred = OGL(X_chunk, y_chunk.to_numpy(), current_weights)
+        new_weights, y_pred = OGC(X_chunk, y_chunk.to_numpy(), current_weights)
 
         with sim_instance.lock:
             chunk_num = (sim_instance.current_index // CHUNK_SIZE) + 1
