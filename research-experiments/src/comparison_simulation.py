@@ -1,14 +1,7 @@
 #!/usr/bin/env python3
 """
-SIMULATION STUDY: Kernel vs Linear Online Learning
+SIMULATION STUDY: Kernel and Online Learning
 ===================================================
-
-Comprehensive simulation demonstrating when kernel methods outperform linear methods:
-- 11 Datasets with varying complexity
-- 6 Algorithms (PA, Perceptron, AROW, OGL, SCW, AdaRDA) with Linear and Kernel versions
-- 3 Imbalance ratios (50-50, 70-30, 90-10)
-
-Uses exact algorithms from online.py for fair comparison.
 """
 
 import numpy as np
@@ -1547,7 +1540,7 @@ def main():
     
     # Save results - use absolute path relative to script location
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    output_file = os.path.join(script_dir, '..', 'results', 'simulation_kernel_vs_linear.csv')
+    output_file = os.path.join(script_dir, '..', 'results', 'comparison_simulation.csv')
     output_file = os.path.abspath(output_file)
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     df_results.to_csv(output_file, index=False)
@@ -1558,23 +1551,7 @@ def main():
     print("="*100)
     print(f"""
 Configuration:
-- Datasets: 11 (1 Linear + 10 Non-Linear)
-- Algorithms: 6 (PA, Perceptron, AROW, OGL, SCW, AdaRDA)
-- Imbalance Ratios: 3 (50-50, 70-30, 90-10)
 - Total Experiments: {len(df_results) // 2} (Linear+Kernel pairs)
-
-Key Findings:
-1. LINEAR DATA:
-   - Both linear and kernel methods perform similarly
-   - Linear methods are sufficient
-
-2. NON-LINEAR DATA:
-   - Kernel methods consistently outperform linear methods
-   - Performance gain varies by dataset complexity
-
-3. IMBALANCE EFFECTS:
-   - Higher imbalance can affect both methods
-   - Kernel methods remain more robust
     """)
 
 if __name__ == "__main__":
