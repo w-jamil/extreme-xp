@@ -15,7 +15,7 @@ echo ""
 
 # Check if Docker is available
 if ! command -v docker-compose &> /dev/null; then
-    echo "⚠️  docker-compose is not installed or not in PATH."
+    echo "docker-compose is not installed or not in PATH."
     echo "Only OnlineToBatch experiments will run (they don't require Docker)."
     echo ""
 fi
@@ -46,7 +46,7 @@ if [ -d "cl_case1" ] && command -v docker-compose &> /dev/null; then
         echo "✗ Continual Learning Case 1 failed or was interrupted."
     fi
 else
-    echo "⚠️  CL Case 1 directory not found or docker-compose not available"
+    echo "  CL Case 1 directory not found or docker-compose not available"
 fi
 
 echo ""
@@ -56,12 +56,12 @@ echo "======================================================"
 if [ -d "cl_case2" ] && command -v docker-compose &> /dev/null; then
     echo "Running Continual Learning Case 2 (Sliding window approach)..."
     if sudo docker-compose up --build --exit-code-from cl_case2-experiment cl_case2-experiment; then
-        echo "✓ Continual Learning Case 2 completed successfully."
+        echo " Continual Learning Case 2 completed successfully."
     else
-        echo "✗ Continual Learning Case 2 failed or was interrupted."
+        echo " Continual Learning Case 2 failed or was interrupted."
     fi
 else
-    echo "⚠️  CL Case 2 directory not found or docker-compose not available"
+    echo "  CL Case 2 directory not found or docker-compose not available"
 fi
 
 echo ""
@@ -71,12 +71,12 @@ echo "======================================================"
 if [ -d "online" ] && command -v docker-compose &> /dev/null; then
     echo "Running Online Learning experiment (Streaming approach)..."
     if sudo docker-compose up --build --exit-code-from online-experiment online-experiment; then
-        echo "✓ Online Learning experiment completed successfully."
+        echo " Online Learning experiment completed successfully."
     else
-        echo "✗ Online Learning experiment failed or was interrupted."
+        echo " Online Learning experiment failed or was interrupted."
     fi
 else
-    echo "⚠️  Online directory not found or docker-compose not available"
+    echo "  Online directory not found or docker-compose not available"
 fi
 
 echo ""
