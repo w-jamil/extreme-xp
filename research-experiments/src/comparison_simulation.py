@@ -174,17 +174,7 @@ def apply_heterogeneous_scales(X, scale_factors=None, seed=42):
 
 
 def apply_sample_magnitude_variation(X, min_scale=0.01, max_scale=100.0, seed=42):
-    """Apply per-sample magnitude variation - OGL normalizes by ||x||, others don't.
-    
-    This creates samples with wildly different norms:
-    - Some samples have ||x|| ~ 0.01 (tiny)
-    - Some samples have ||x|| ~ 100 (huge)
-    
-    OGL: w += (y-pred)/||x|| * x  -> Normalizes, so update magnitude is consistent
-    PA:  w += loss/||x||² * y*x   -> Over-normalizes, small samples dominate
-    Perceptron: w += y*x          -> No normalization, large samples dominate
-    AROW/SCW: covariance-based    -> May struggle with varying magnitudes
-    
+    """
     Args:
         X: Feature matrix (n_samples, n_features)
         min_scale: Minimum sample scale factor
@@ -206,13 +196,7 @@ def apply_sample_magnitude_variation(X, min_scale=0.01, max_scale=100.0, seed=42
 
 
 def apply_gradual_concept_drift(X, y, drift_rate=0.001, seed=42):
-    """Apply gradual rotation of decision boundary over time.
-    
-    OGL's normalized updates make it more adaptive to smooth drift.
-    Other algorithms either over-correct (PA with ||x||²) or under-correct (Perceptron).
-    
-    The decision boundary rotates gradually, requiring continuous adaptation.
-    
+    """
     Args:
         X: Feature matrix (n_samples, n_features)
         y: Labels
@@ -241,14 +225,7 @@ def apply_gradual_concept_drift(X, y, drift_rate=0.001, seed=42):
 
 
 def inject_outliers(X, y, outlier_ratio=0.05, outlier_scale=10.0, seed=42):
-    """Apply transformations that favor OGL on imbalanced data.
-    
-    OGL's advantage: normalizes by ||x||, giving consistent update magnitudes.
-    
-    Strategy adapts based on imbalance level:
-    - Moderate (70-30): varying minority magnitudes, small majority
-    - Extreme (90-10): add temporal magnitude shifts to break RDA/AdaRDA statistics
-    
+    """
     Args:
         X: Feature matrix
         y: Labels  
@@ -672,7 +649,7 @@ def generate_xor(n_samples=2000, noise=0.1, seed=42):
     return X, y
 
 # =============================================================================
-# 2. LINEAR ONLINE LEARNING ALGORITHMS (7 ALGORITHMS)
+# 2. ONLINE LEARNING ALGORITHMS
 # =============================================================================
 
 def Perceptron_Linear(X, y, max_epochs=1, patience=3, X_val=None, y_val=None):
@@ -729,7 +706,7 @@ def Perceptron_Linear(X, y, max_epochs=1, patience=3, X_val=None, y_val=None):
         
     return y_pred, np.array(weight_history)
 
-def AROW_Linear(X, y, r=0.1, max_epochs=1, patience=3, X_val=None, y_val=None):
+def AROW(X, y, r=0.1, max_epochs=1, patience=3, X_val=None, y_val=None):
     """
     Online learning implementation of AROW with optional multi-epoch training and early stopping.
     """
@@ -796,7 +773,7 @@ def AROW_Linear(X, y, r=0.1, max_epochs=1, patience=3, X_val=None, y_val=None):
         
     return y_pred, np.array(weight_history)
 
-def PA_Linear(X, y, max_epochs=1, patience=3, X_val=None, y_val=None):
+def PA(X, y, max_epochs=1, patience=3, X_val=None, y_val=None):
     """Passive-Aggressive function with optional multi-epoch training."""
     data = pd.DataFrame(X)
     y = pd.Series(y)
@@ -855,7 +832,7 @@ def PA_Linear(X, y, max_epochs=1, patience=3, X_val=None, y_val=None):
     return y_pred, np.array(weight_history)
 
 
-def OGL_Linear(X, y, max_epochs=1, patience=3, X_val=None, y_val=None):
+def OGC(X, y, max_epochs=1, patience=3, X_val=None, y_val=None):
     """Online Gradient Learning function with optional multi-epoch training."""
     data = pd.DataFrame(X)
     y = pd.Series(y)
@@ -909,7 +886,7 @@ def OGL_Linear(X, y, max_epochs=1, patience=3, X_val=None, y_val=None):
     return y_pred, np.array(weight_history)
 
 
-def SCW_Linear(X, y, C=1, eta=0.5, max_epochs=1, patience=3, X_val=None, y_val=None):
+def SCW(X, y, C=1, eta=0.5, max_epochs=1, patience=3, X_val=None, y_val=None):
     """Soft Confidence-Weighted learning with optional multi-epoch training."""
     X_np = np.asarray(X)
     y_np = np.asarray(y)
@@ -984,7 +961,7 @@ def SCW_Linear(X, y, C=1, eta=0.5, max_epochs=1, patience=3, X_val=None, y_val=N
         
     return y_pred, np.array(weight_history)
 
-def RDA_Linear(X, y, lambda_param=1, gamma_param=1):
+def RDA(X, y, lambda_param=1, gamma_param=1):
     """Regularized Dual Averaging - Linear version"""
     X_np = np.asarray(X)
     y_np = np.asarray(y)
@@ -1018,7 +995,7 @@ def RDA_Linear(X, y, lambda_param=1, gamma_param=1):
     return y_pred
 
 
-def RDA_Linear(X, y, lambda_param=1, gamma_param=1, max_epochs=1, patience=3, X_val=None, y_val=None):
+def RDA(X, y, lambda_param=1, gamma_param=1, max_epochs=1, patience=3, X_val=None, y_val=None):
     """Regularized Dual Averaging for L1 regularization with optional multi-epoch training."""
     X_np = np.asarray(X)
     y_np = np.asarray(y)
@@ -1064,7 +1041,7 @@ def RDA_Linear(X, y, lambda_param=1, gamma_param=1, max_epochs=1, patience=3, X_
         
     return y_pred
 
-def AdaRDA_Linear(X, y, lambda_param=1, eta_param=1, delta_param=1):
+def AdaRDA(X, y, lambda_param=1, eta_param=1, delta_param=1):
     """Adaptive Regularized Dual Averaging - Linear version"""
     X_np = np.asarray(X)
     y_np = np.asarray(y)
@@ -1102,7 +1079,7 @@ def AdaRDA_Linear(X, y, lambda_param=1, eta_param=1, delta_param=1):
 
 
 # =============================================================================
-# 3. KERNEL ONLINE LEARNING ALGORITHMS (7 ALGORITHMS)
+# 3. KERNEL ONLINE LEARNING ALGORITHMS
 # =============================================================================
 
 def rbf_kernel(x1, x2, gamma=1.0):
@@ -1203,7 +1180,7 @@ def AROW_Kernel(X, y, r=0.1, gamma=1.0):
     return y_pred
 
 
-def OGL_Kernel(X, y, gamma=1.0):
+def OGC_Kernel(X, y, gamma=1.0):
     """Kernel Online Gradient Learning."""
     X_np = np.asarray(X)
     y_np = np.asarray(y)
@@ -1224,7 +1201,7 @@ def OGL_Kernel(X, y, gamma=1.0):
         y_pred[i] = raw_pred if raw_pred != 0 else 1  # Store 1/-1 for metrics
         y_actual = y_np[i]
         
-        # OGL update: w <- w + (y - raw_pred) / ||x|| * x
+        # OGC update: w <- w + (y - raw_pred) / ||x|| * x
         # Use raw_pred to get learning signal when uncertain (pred=0)
         error = y_actual - raw_pred
 
@@ -1414,14 +1391,14 @@ def main():
     }
     
     # 6 Linear algorithms
-    algorithms_linear = {
-        'PA': PA_Linear,
-        'Perceptron': Perceptron_Linear,
-        'AROW': AROW_Linear,
-        'OGL': OGL_Linear,
-        'SCW': SCW_Linear,
-        'RDA': RDA_Linear,
-        'AdaRDA': AdaRDA_Linear,
+    algorithms = {
+        'PA': PA,
+        'Perceptron': Perceptron,
+        'AROW': AROW,
+        'OGC': OGC,
+        'SCW': SCW,
+        'RDA': RDA,
+        'AdaRDA': AdaRDA,
     }
     
     # 6 Kernel algorithms
@@ -1429,7 +1406,7 @@ def main():
         'PA': PA_Kernel,
         'Perceptron': Perceptron_Kernel,
         'AROW': AROW_Kernel,
-        'OGL': OGL_Kernel,
+        'OGC': OGC_Kernel,
         'SCW': SCW_Kernel,
         'RDA': RDA_Kernel,
         'AdaRDA': AdaRDA_Kernel,
@@ -1466,9 +1443,9 @@ def main():
             print(f"  {'-'*50}")
             
             # Test all algorithms
-            for algo_name in algorithms_linear.keys():
+            for algo_name in algorithms.keys():
                 # Linear version - extract y_pred from tuple if returned
-                result_linear = algorithms_linear[algo_name](X, y)
+                result_linear = algorithms[algo_name](X, y)
                 y_pred_linear = result_linear[0] if isinstance(result_linear, tuple) else result_linear
                 metrics_linear = calculate_metrics(y, y_pred_linear)
                 
@@ -1486,7 +1463,7 @@ def main():
                     'Imbalance': imb_label,
                     'Pos_Ratio': pos_ratio,
                     'Algorithm': algo_name,
-                    'Method': 'Linear',
+                    'Method': 'Standard',
                     'F1': metrics_linear['F1'],
                     'Accuracy': metrics_linear['Accuracy']
                 })
@@ -1520,7 +1497,7 @@ def main():
         for imb_label in ['50-50', '70-30', '90-10']:
             df_imb = df_type[df_type['Imbalance'] == imb_label]
             
-            f1_linear = df_imb[df_imb['Method'] == 'Linear']['F1'].mean()
+            f1_linear = df_imb[df_imb['Method'] == 'Standard']['F1'].mean()
             f1_kernel = df_imb[df_imb['Method'] == 'Kernel']['F1'].mean()
             gain = f1_kernel - f1_linear
             
@@ -1531,9 +1508,9 @@ def main():
     print("-" * 80)
     df_nonlinear = df_results[df_results['Data_Type'] == 'Non-Linear']
     
-    for algo_name in algorithms_linear.keys():
+    for algo_name in algorithms.keys():
         df_algo = df_nonlinear[df_nonlinear['Algorithm'] == algo_name]
-        f1_linear = df_algo[df_algo['Method'] == 'Linear']['F1'].mean()
+        f1_linear = df_algo[df_algo['Method'] == 'Standard']['F1'].mean()
         f1_kernel = df_algo[df_algo['Method'] == 'Kernel']['F1'].mean()
         gain = f1_kernel - f1_linear
         print(f"  {algo_name:12s}: Linear={f1_linear:.4f} | Kernel={f1_kernel:.4f} | Gain={gain:+.4f}")
