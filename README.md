@@ -1,110 +1,76 @@
-# Extreme-XP: Machine Learning Experiment Suite
+# Constraint-Aware Machine Learning
 
-A comprehensive machine learning experiment suite featuring **Batch Learning**, **Continual Learning**, and **Online Learning** approaches. This suite implements multiple machine learning paradigms on simulated, financial, cybersecurity and image dataset(s).
+Constraint-aware machine learning derives the learning algorithm from a constrained optimisation problem. This repository contains experiments spanning three learning paradigms — batch, continual, and online — with ongoing research into online learning under delayed and batched feedback.
 
-## Experiment Types
+---
 
-### 1. OnlineToBatch Learning Protocol
-**Location**: `batch/` directory
+## Repository Structure
 
-Novel hybrid approach that combines online learning benefits with batch validation:
-- **Algorithms**: Regression and classification algorithms
-- **Approach**: Epoch-based training with data shuffling for stochasticity
-- **Validation**: Held-out data to select optimal model weights
+```
+research-experiments/    Core scripts for the primary research work
+experiment-dashboard/    Flask-based interactive visualisation tool
+caml-initial-study/      Phase 1 "Initial Study" experiments (Deliverable 3.2)
+```
 
-### 2. Continual Learning
-**Locations**: `cl_case1/` and `cl_case2/` directories
+---
 
-Sequential learning with catastrophic forgetting mitigation:
-- **Algorithms**: Regression and classification algorithms
-- **Case 1**: Task-agnostic continual learning approach
-- **Case 2**: Sliding window continual learning paradigm  
+## Research Experiments
 
+All benchmarking scripts are in the `research-experiments/` directory.
 
-### 3. Online Learning  
-**Location**: `online/` directory
-
-Online data processing:
-- **Algorithms**: Regression and classification algorithms
-- **Approach**: Adaptive learning from data streams
-
-
-
-## How to Run Experiments
-
-Navigate to the `master-experiment-suite/` directory and use the provided scripts:
-
-**Run all experiments sequentially:**
+### Kernel vs. Standard Simulation
+Compares standard against kernel-based classifiers on simulated data in an online setting.
 ```bash
-cd master-experiment-suite/
-bash run_all.sh
+cd research-experiments
+python comparison_simulation.py
 ```
 
-**Run specific experiment types:**
+### Online Learning
+Online data processing and adaptive learning experiments on published datasets.
 ```bash
-bash run_batch.sh      
-bash run_continual.sh  
-bash run_online.sh    
+cd research-experiments
+python online.py
 ```
 
-### Directory Structure
+### Kernel-Based Learning
+Experiments on high-dimensional kernel mappings for non-linear decision boundaries on published datasets.
+```bash
+cd research-experiments
+python kernel_experiments.py
 ```
-extreme-xp/
-├── README.md                         # Comprehensive project documentation
-├── .gitignore                       # Git ignore patterns for datasets/results
-└── master-experiment-suite/
-    ├── algorithmic_allocation       # Scripts (experiment)
-    ├── regression_experiments       # Scripts and csv files (experiment results)
-    ├── .gitignore                   # Additional ignore patterns
-    ├── docker-compose.yaml          # Docker orchestration for all experiments
-    ├── run_all.sh                   # Run all experiments sequentially
-    ├── run_batch.sh                 # OnlineToBatch experiments only
-    ├── run_continual.sh             # Continual learning experiments
-    ├── run_online.sh                # Online learning experiments
-    ├── batch/                       # OnlineToBatch Learning
-    │   ├── Dockerfile               # Docker container configuration
-    │   ├── requirements.txt         # Python dependencies
-    │   ├── src/
-    │   │   ├── batch_sim.py        # cybersecurity experiments
-    │   │   ├── mnist_sim.py        # binary classification
-    │   │   ├── hybrid_sim.py       # Hybrid learning approaches
-    │   │   ├── algorithms.py       # Algorithm implementations
-    │   │   └── data_handler.py     # Data loading utilities
-    │   ├── results/                # Generated experiment results
-    │   └── cyber/                  # datasets (auto-downloaded)
-    ├── cl_case1/                   # Continual Learning Case 1 
-    │   ├── Dockerfile               # Docker container configuration
-    │   ├── requirements.txt         # Python dependencies
-    │   ├── src/
-    │   │   ├── case1_sim.py        # Main continual learning experiment
-    │   │   ├── algorithms.py       # Algorithm implementations
-    │   │   ├── data_handler.py     # Data loading utilities
-    │   │   ├── data_processor.py   # Task generation utilities
-    │   │   ├── evaluation.py       # Performance evaluation
-    │   │   └── [additional experiment files]
-    │   ├── results/                # Generated experiment results
-    │   └── cyber/                  # datasets (auto-downloaded)
-    ├── cl_case2/                   # Continual Learning Case 2
-    │   ├── Dockerfile               # Docker container configuration
-    │   ├── requirements.txt         # Python dependencies
-    │   ├── src/
-    │   │   ├── case2_sim.py        # Sliding window continual learning
-    │   │   └── [supporting files]
-    │   ├── results/                # Generated experiment results
-    │   └── cyber/                  # datasets (auto-downloaded)
-    └── online/                     # Online Learning
-        ├── Dockerfile               # Docker container configuration
-        ├── requirements.txt         # Python dependencies
-        ├── src/
-        │   ├── online.py           # Main online learning experiment
-        │   └── data_handler.py     # Data loading + Kaggle integration
-        ├── results/                # Generated experiment results
-        ├── cyber/                  # RBD24 datasets (auto-downloaded)
-        └── data/                   # Kaggle datasets (auto-downloaded)
+
+---
+
+## Interactive Dashboard
+
+A Flask application for visualising experiment results interactively.
+
+```bash
+cd experiment-dashboard
+python app.py
 ```
+
+Then open `http://127.0.0.1:5000` in a browser.
+
+---
+
+## Initial Study (Phase 1)
+
+The `caml-initial-study/` directory contains the codebase for **Deliverable 3.2**, which established the baseline for constraint-aware online learning. See `caml-initial-study/README.md` for setup and historical results.
+
+---
 
 ## Prerequisites
 
-- **Python 3.8+** with virtual environment
-- **Docker and docker-compose** (for continual and online learning experiments)
-- **Internet connection** (for automatic dataset downloads)
+- Python 3.8+
+- Install dependencies: `pip install -r requirements.txt`
+  - Required: `numpy`, `scikit-learn`, `pandas`, `flask`, `matplotlib`, `scipy`, `seaborn`
+- Docker recommended for isolated execution
+
+---
+
+## Citation
+
+> **Jamil, W.** and Bouchachia, A. Online Gradient-based Learning. *In progress.*
+
+---
