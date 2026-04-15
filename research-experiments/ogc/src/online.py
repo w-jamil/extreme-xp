@@ -192,8 +192,8 @@ def PERCEPT(X, y, max_epochs=1, patience=3, X_val=None, y_val=None):
         
     return y_pred, np.array(weight_history)
 
-def OGL(X, y, max_epochs=1, patience=3, X_val=None, y_val=None):
-    """Online Gradient Learning function with optional multi-epoch training."""
+def OGC(X, y, max_epochs=1, patience=3, X_val=None, y_val=None):
+    """Online Gradient Classification function with optional multi-epoch training."""
     data = pd.DataFrame(X)
     y = pd.Series(y)
     weight_history = []
@@ -807,7 +807,7 @@ if __name__ == "__main__":
         algorithms_to_run = {
             "PA": lambda X, y: AP(X, y),
             "Perceptron": lambda X, y: PERCEPT(X, y),
-            "GLC": lambda X, y: OGL(X, y),
+            "GLC": lambda X, y: OGC(X, y),
             "AROW": lambda X, y: AROW(X, y, r=0.1),
             "RDA": lambda X, y: RDA(X, y, lambda_param=1, gamma_param=1),
             "SCW": lambda X, y: SCW(X, y, C=1, eta=0.5),

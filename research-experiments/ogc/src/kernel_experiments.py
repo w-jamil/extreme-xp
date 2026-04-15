@@ -654,7 +654,7 @@ class KernelAdaRDA:
 # F1 SCORE PLOTTING (PER SHUFFLE)
 # =============================================================================
 
-def plot_f1_scores(f1_data, dataset_name, output_path=None, highlight='K-OGL'):
+def plot_f1_scores(f1_data, dataset_name, output_path=None, highlight='K-OGC'):
     """
     Plot F1 scores for each shuffle across all algorithms.
     
@@ -662,13 +662,13 @@ def plot_f1_scores(f1_data, dataset_name, output_path=None, highlight='K-OGL'):
         f1_data: Dict mapping algorithm name to list of F1 scores (one per shuffle)
         dataset_name: Name of dataset for the title
         output_path: Path to save figure (None = show only)
-        highlight: Algorithm to highlight (default: K-OGL)
+        highlight: Algorithm to highlight (default: K-OGC)
     """
     plt.figure(figsize=(12, 6))
     
     # Style settings for each algorithm
     styles = {
-        'K-OGL': {'color': '#e41a1c', 'linewidth': 2.5, 'linestyle': '-', 'marker': 'o', 'markersize': 3},
+        'K-OGC': {'color': '#e41a1c', 'linewidth': 2.5, 'linestyle': '-', 'marker': 'o', 'markersize': 3},
         'K-Perceptron': {'color': '#377eb8', 'linewidth': 1.0, 'linestyle': '--', 'marker': '', 'markersize': 0},
         'K-PA': {'color': '#4daf4a', 'linewidth': 1.0, 'linestyle': '--', 'marker': '', 'markersize': 0},
         'K-AROW': {'color': '#984ea3', 'linewidth': 1.0, 'linestyle': '-.', 'marker': '', 'markersize': 0},
@@ -696,7 +696,7 @@ def plot_f1_scores(f1_data, dataset_name, output_path=None, highlight='K-OGL'):
     
     plt.xlabel('Shuffle Number', fontsize=12)
     plt.ylabel('F1 Score', fontsize=12)
-    plt.title(f'F1 Scores Across Shuffles - {dataset_name}\n(K-OGL highlighted)', fontsize=14)
+    plt.title(f'F1 Scores Across Shuffles - {dataset_name}\n(K-OGC highlighted)', fontsize=14)
     plt.legend(loc='lower right', fontsize=9)
     plt.grid(True, alpha=0.3)
     plt.xlim(1, n_shuffles)
@@ -953,7 +953,7 @@ def run_repeated_experiments(n_repeats=10, gamma='tune', max_sv=500, epochs=3, t
             'K-Perceptron': lambda: KernelPerceptron(gamma=gamma_val, max_sv=max_sv),
             'K-PA': lambda: KernelPassiveAggressive(gamma=gamma_val, max_sv=max_sv, C=1.0),
             'K-AROW': lambda: KernelAROW(gamma=gamma_val, r=1.0, max_sv=min(max_sv, 500)),
-            'K-OGL': lambda: KernelOGL(gamma=gamma_val, max_sv=max_sv),
+            'K-OGC': lambda: KernelOGL(gamma=gamma_val, max_sv=max_sv),
             'K-RDA': lambda: KernelRDA(gamma=gamma_val, lambda_param=0.01, max_sv=min(max_sv, 500)),
             'K-SCW': lambda: KernelSCW(gamma=gamma_val, C=1.0, phi=0.5, max_sv=min(max_sv, 500)),
             'K-AdaRDA': lambda: KernelAdaRDA(gamma=gamma_val, lambda_param=0.01, max_sv=min(max_sv, 500)),
@@ -1098,7 +1098,7 @@ def run_repeated_experiments(n_repeats=10, gamma='tune', max_sv=500, epochs=3, t
     
     # Generate F1 line plots for each dataset
     algo_colors = {
-        'K-OGL': '#e41a1c',      # Red - highlighted
+        'K-OGC': '#e41a1c',      # Red - highlighted
         'K-Perceptron': '#377eb8',
         'K-PA': '#4daf4a',
         'K-AROW': '#984ea3',
@@ -1116,9 +1116,9 @@ def run_repeated_experiments(n_repeats=10, gamma='tune', max_sv=500, epochs=3, t
         for algo in algorithms:
             df_algo = df_ds[df_ds['Algorithm'] == algo].sort_values('Shuffle')
             color = algo_colors.get(algo, 'gray')
-            linewidth = 3 if algo == 'K-OGL' else 1.5
-            alpha = 1.0 if algo == 'K-OGL' else 0.7
-            zorder = 10 if algo == 'K-OGL' else 1
+            linewidth = 3 if algo == 'K-OGC' else 1.5
+            alpha = 1.0 if algo == 'K-OGC' else 0.7
+            zorder = 10 if algo == 'K-OGC' else 1
             
             # Compute running average
             f1_values = df_algo['F1'].values
@@ -1130,7 +1130,7 @@ def run_repeated_experiments(n_repeats=10, gamma='tune', max_sv=500, epochs=3, t
         
         ax.set_xlabel('Shuffle', fontsize=12)
         ax.set_ylabel('Running Average F1 Score', fontsize=12)
-        ax.set_title(f'Running Average F1 Score - {dataset_name}\n(K-OGL highlighted)', fontsize=14)
+        ax.set_title(f'Running Average F1 Score - {dataset_name}\n(K-OGC highlighted)', fontsize=14)
         ax.legend(loc='lower right', fontsize=10)
         ax.grid(True, alpha=0.3)
         ax.set_xlim(1, n_repeats)
@@ -1180,7 +1180,7 @@ def run_experiments(gamma='tune', max_sv=1000, epochs=3, subsample=10000, max_tr
             'K-Perceptron': lambda: KernelPerceptron(gamma=gamma_val, max_sv=max_sv),
             'K-PA': lambda: KernelPassiveAggressive(gamma=gamma_val, max_sv=max_sv, C=1.0),
             'K-AROW': lambda: KernelAROW(gamma=gamma_val, r=1.0, max_sv=min(max_sv, 500)),
-            'K-OGL': lambda: KernelOGL(gamma=gamma_val, max_sv=max_sv),
+            'K-OGC': lambda: KernelOGL(gamma=gamma_val, max_sv=max_sv),
             'K-RDA': lambda: KernelRDA(gamma=gamma_val, lambda_param=0.01, max_sv=min(max_sv, 500)),
             'K-SCW': lambda: KernelSCW(gamma=gamma_val, C=1.0, phi=0.5, max_sv=min(max_sv, 500)),
             'K-AdaRDA': lambda: KernelAdaRDA(gamma=gamma_val, lambda_param=0.01, max_sv=min(max_sv, 500)),
