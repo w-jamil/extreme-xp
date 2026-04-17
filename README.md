@@ -9,7 +9,7 @@ Constraint-aware machine learning derives the learning algorithm from a constrai
 ```
 online-classificaton/  Core scripts for the primary research work
 - dash/                Flask-based interactive simulation dashboard
-- data/                Data (parquet files), download [here](https://drive.google.com/file/d/1jixn6DH4HKCH4Yw_2wT5h-S-teBvJET-/view?usp=sharing)
+- data/                Data (parquet files), download [here](https://drive.google.com/file/d/1jixn6DH4HKCH4Yw_2wT5h-S-teBvJET-/view?usp=sharing).
 - results/             Output CSVs and plots
 caml-initial-study/    Phase 1 "Initial Study" experiments (Deliverable 3.2)
 ```
@@ -23,7 +23,7 @@ All benchmarking scripts are in the `online-classificaton/` directory.
 ### Running All Experiments
 ```bash
 cd online-classificaton
-python main.py --experiment all or python main.py
+python main.py --experiment all  # or: python main.py
 ```
 
 ### Simulation
@@ -41,7 +41,7 @@ python main.py --experiment online
 ```
 
 ### Kernel Benchmark
-Batch kernel experiments on UCI datasets (HeartFailure, ClevelandHeart, UNSW).
+Batch kernel experiments on the Cleveland Heart Disease (UCI) dataset.
 ```bash
 cd online-classificaton
 python main.py --experiment kernel
