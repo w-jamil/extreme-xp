@@ -21,7 +21,7 @@ logging.basicConfig(level=logging.INFO)
 
 # --- NEW: ZENODO CONFIGURATION ---
 ZENODO_ARCHIVE_URL = 'https://zenodo.org/api/records/13787591/files-archive'
-DATA_DIRECTORY = 'cyber/'
+DATA_DIRECTORY = os.path.join(os.path.dirname(__file__), '..', 'data')
 # --- END NEW ---
 
 CHUNK_SIZE = 1  # Number of rows to process as a "30-second" chunk
@@ -131,21 +131,40 @@ def load_and_process_data(file_path):
     """Loads and processes a single parquet file using the required aggregation logic."""
     try:
         df = pd.read_parquet(file_path)
-        df = df.sort_values(['timestamp']).reset_index(drop=True)
+        
+        # Determine the correct time column name
+        if 'Time' in df.columns:
+            time_col = 'Time'
+        elif 'timestamp' in df.columns:
+            time_col = 'timestamp'
+        else:
+            raise KeyError("No time column found. Expected 'Time' or 'timestamp'.")
+        
+        # Determine the correct label column name
+        if 'Class' in df.columns:
+            label_col = 'Class'
+        elif 'label' in df.columns:
+            label_col = 'label'
+        else:
+            raise KeyError("No label column found. Expected 'Class' or 'label'.")
+        
+        df = df.sort_values([time_col]).reset_index(drop=True)
+        
         if 'user_id' in df.columns:
-            df = df.drop(columns=['user_id'], axis=1)
-        x_df = df.groupby(['timestamp']).sum()
-        y_series = x_df["label"].map({0: -1, 1: 1, 2: 1, 3: 1, 4: 1}).fillna(-1)
-        x_df = x_df.drop(columns=['label'], axis=1)
+            df = df.drop(columns=['user_id'])
+        
+        x_df = df.groupby([time_col]).sum()
+        y_series = x_df[label_col].map(lambda x: 1 if x > 0 else -1)
+        x_df = x_df.drop(columns=[label_col])
         return x_df, y_series
     except Exception as e:
         logging.error(f"Failed to load/process {file_path}: {e}")
         raise
 
 # =============================================================================
-# SIMULATION STATE MANAGEMENT (Unchanged)
+# SIMULATION STATE MANAGEMENT
 # =============================================================================
-class NIDSSimulation:
+class Simulation:
     def __init__(self, dataset_name, X_data, y_data):
         self.dataset_name, self.X_data, self.y_data = dataset_name, X_data, y_data
         self.status, self.logs, self.alerts = "running", [], []
@@ -332,7 +351,8 @@ def find_available_datasets():
         logging.error(f"Data directory '{DATA_DIRECTORY}' not found!")
         return []
     try:
-        files = [f.replace('.parquet', '') for f in os.listdir(DATA_DIRECTORY) if f.endswith('.parquet')]
+        files = [f.replace('.parquet', '') for f in os.listdir(DATA_DIRECTORY) 
+                 if f.endswith('.parquet') and 'MNIST' not in f.upper()]
         return sorted(files)
     except Exception as e:
         logging.error(f"Error scanning data directory: {e}")
@@ -361,7 +381,7 @@ def start_simulation():
         return jsonify({"status": "error", "message": f"Failed to load data for {dataset_name}: {e}"}), 400
         
     simulation_id = str(uuid.uuid4())
-    sim_instance = NIDSSimulation(dataset_name, X_data, y_data)
+    sim_instance = Simulation(dataset_name, X_data, y_data)
     
     with simulations_lock:
         simulations[simulation_id] = sim_instance

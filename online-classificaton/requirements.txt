@@ -1,0 +1,19 @@
+# Core dependencies
+flask
+pandas
+numpy
+scikit-learn
+scipy
+requests
+
+# Data handling
+pyarrow
+
+# Numba for JIT compilation (research-experiments)
+numba
+
+# Visualization
+matplotlib
+
+# Progress bars
+tqdm

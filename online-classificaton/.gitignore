@@ -1,0 +1,16 @@
+# Data files (hosted externally)
+data/**
+!data/
+!data/kernel/
+data/kernel/**
+!data/kernel/.gitkeep
+!data/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Misc
+.DS_Store
+*.swp
