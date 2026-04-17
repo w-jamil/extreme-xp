@@ -12,9 +12,9 @@ online-classificaton/  Core scripts for the primary research work
 - data/                Data (parquet files)
 - results/             Output CSVs and plots
 caml-initial-study/    Phase 1 "Initial Study" experiments (Deliverable 3.2)
----
-Please download data from [this](https://drive.google.com/file/d/1jixn6DH4HKCH4Yw_2wT5h-S-teBvJET-/view?usp=sharing)```link and add the parquet files files to online-classificaton/data/ 
+```
 
+Please download data from [this](https://drive.google.com/file/d/1jixn6DH4HKCH4Yw_2wT5h-S-teBvJET-/view?usp=sharing) link and add the parquet files to online-classificaton/data/
 
 ## Research Experiments
 
