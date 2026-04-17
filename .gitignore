@@ -6,13 +6,13 @@ results/
 **/data/
 **/results/
 
-# Exception: include online-classificaton results and data gitkeeps
-!online-classificaton/results/
-!online-classificaton/results/**
-!online-classificaton/data/
-!online-classificaton/data/.gitkeep
-!online-classificaton/data/kernel/
-!online-classificaton/data/kernel/.gitkeep
+# Exception: include online-classification results and data gitkeeps
+!online-classification/results/
+!online-classification/results/**
+!online-classification/data/
+!online-classification/data/.gitkeep
+!online-classification/data/kernel/
+!online-classification/data/kernel/.gitkeep
 
 # Large dataset files
 *.parquet

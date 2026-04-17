@@ -1116,7 +1116,7 @@ def run_kernel_benchmark(data_dir, output_dir=None, n_repeats=100,
         y_raw = np.where(df['label'].values == 0, -1, 1)
         print(f"  Total: {len(X_raw)}, +1: {(y_raw==1).sum()} ({100*(y_raw==1).mean():.1f}%)")
 
-        algo_metrics = {n: {'Precision': [], 'Recall': [], 'F1': [], 'SVs': []}
+        algo_metrics = {n: {'Precision': [], 'Recall': [], 'F1': [], 'FPR': [], 'SVs': []}
                         for n in _get_batch_kernel_algos(0.1, max_sv)}
 
         gamma_val = None
@@ -1151,6 +1151,7 @@ def run_kernel_benchmark(data_dir, output_dir=None, n_repeats=100,
                 algo_metrics[name]['Precision'].append(m['Precision'])
                 algo_metrics[name]['Recall'].append(m['Recall'])
                 algo_metrics[name]['F1'].append(m['F1'])
+                algo_metrics[name]['FPR'].append(m['FPR'])
                 algo_metrics[name]['SVs'].append(n_sv)
                 per_shuffle.append({'Dataset': ds_name, 'Algorithm': name,
                                     'Shuffle': rep + 1, 'F1': m['F1']})
@@ -1172,7 +1173,7 @@ def run_kernel_benchmark(data_dir, output_dir=None, n_repeats=100,
             all_results.append({
                 'Dataset': ds_name, 'Algorithm': name,
                 'Precision': pm, 'Recall': rm, 'F1': fm,
-                'FNR': 1.0 - rm, 'FPR': 0.0,  # Approximate FNR from recall
+                'FNR': 1.0 - rm, 'FPR': np.mean(algo_metrics[name]['FPR']),
             })
 
     # Save

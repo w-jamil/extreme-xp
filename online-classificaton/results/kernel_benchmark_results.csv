@@ -1,8 +1,0 @@
-Dataset,Algorithm,Precision,Recall,F1,FNR,FPR
-ClevelandHeart_UCI,KernelPerceptron,0.7466,0.7299,0.7294,0.2701,0.0000
-ClevelandHeart_UCI,KernelPA,0.7564,0.7878,0.7716,0.2122,0.0000
-ClevelandHeart_UCI,KernelAROW,0.8074,0.7555,0.7782,0.2445,0.0000
-ClevelandHeart_UCI,KernelGC,0.8536,0.7452,0.7955,0.2548,0.0000
-ClevelandHeart_UCI,KernelRDA,0.9283,0.4368,0.5617,0.5632,0.0000
-ClevelandHeart_UCI,KernelSCW,0.8253,0.7567,0.7867,0.2433,0.0000
-ClevelandHeart_UCI,KernelAdaRDA,0.8410,0.7563,0.7943,0.2437,0.0000
