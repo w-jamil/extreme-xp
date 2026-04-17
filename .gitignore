@@ -65,4 +65,4 @@ tmp/
 *.csv
 !*config*.csv
 !*sample*.csv
-!online-classificaton/results/*.csv
+!online-classification/results/*.csv
