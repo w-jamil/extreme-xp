@@ -321,7 +321,7 @@ def _percept_kernel(X, y, perm, w):
         idx = perm[i]
         x = X[idx]
         y_actual = y[idx]
-        # Dot product w · x
+        # Dot product w . x
         score = 0.0
         for j in range(n_features):
             score += x[j] * w[j]
@@ -417,7 +417,7 @@ def _arow_diag_kernel(X, y, perm, u, sigma_diag, r):
         idx = perm[i]
         x = X[idx]
         y_actual = y[idx]
-        # Prediction: u · x
+        # Prediction: u . x
         score = 0.0
         for j in range(x.shape[0]):
             score += x[j] * u[j]
@@ -428,7 +428,7 @@ def _arow_diag_kernel(X, y, perm, u, sigma_diag, r):
         lt = 1.0 - margin
         if lt < 0.0:
             lt = 0.0
-        # Confidence v_t = x^T diag(σ) x
+        # Confidence v_t = x^T diag(\sigma) x
         vt = 0.0
         for j in range(x.shape[0]):
             vt += x[j] * x[j] * sigma_diag[j]
@@ -499,7 +499,7 @@ def _arow_full_kernel(X, y, perm, u, Sigma, r):
         for j in range(n_features):
             for k in range(n_features):
                 Sigma_x[j] += Sigma[j, k] * x[k]
-        # v_t = x^T Σ x = x · Σ_x
+        # v_t = x^T \Sigma x = x · \Sigma_x
         vt = 0.0
         for j in range(n_features):
             vt += x[j] * Sigma_x[j]
@@ -511,10 +511,10 @@ def _arow_full_kernel(X, y, perm, u, Sigma, r):
             else:
                 alpha_t = 0.0
                 beta_t = 0.0
-            # Mean update:  u ← u + α y Σ_x
+            # Mean update:   u + α y \SIGMA_x
             for j in range(n_features):
                 u[j] += alpha_t * y_actual * Sigma_x[j]
-            # Covariance shrink:  Σ ← Σ − β (Σ_x)(Σ_x)^T
+            # Covariance shrink:   \Sigma − β (\Sigma_x)(\Sigma_x)^T
             for j in range(n_features):
                 for k in range(n_features):
                     Sigma[j, k] -= beta_t * Sigma_x[j] * Sigma_x[k]
@@ -581,11 +581,11 @@ def _rda_kernel(X, y, perm, w, g, lambda_param, gamma_param, epoch, n_samples_to
             # No loss ⇒ zero sub-gradient, still decay the average
             for j in range(n_features):
                 g[j] = ((t - 1) / t) * g[j]
-        # Reconstruct weights via soft-thresholding at λ
+        # Reconstruct weights via soft-thresholding at \lambda
         sqrt_t = np.sqrt(float(t))
         for j in range(n_features):
             if np.abs(g[j]) > lambda_param:
-                # RDA weight: −(√t / γ)(ḡ_j − λ sign(ḡ_j))
+                # RDA weight: −(\sqrt{t} / \gamma)(\bar{g}_j − \lambda \text{sign}(\bar{g}_j))
                 w[j] = -(sqrt_t / gamma_param) * (g[j] - lambda_param * np.sign(g[j]))
             else:
                 # Below threshold ⇒ zero (sparsity)
@@ -636,13 +636,13 @@ def _scw_diag_kernel(X, y, perm, u, sigma_diag, C, phi):
             score += x[j] * u[j]
         pred = 1.0 if score > 0 else (-1.0 if score < 0 else 1.0)
         y_pred[i] = pred
-        # Diagonal confidence  v_t = Σ σ_j x_j²
+        # Diagonal confidence  v_t = \sum_j \sigma_j x_j²
         vt = 0.0
         for j in range(n_features):
             vt += x[j] * x[j] * sigma_diag[j]
         # Signed margin
         mt = y_actual * score
-        # SCW loss = φ √v_t − m_t  (clamped to ≥ 0)
+        # SCW loss =\phi\sqrt{v_t} − m_t  (clamped to \geq 0)
         lt = phi * np.sqrt(vt) - mt
         if lt < 0.0:
             lt = 0.0
@@ -676,7 +676,7 @@ def _scw_diag_kernel(X, y, perm, u, sigma_diag, C, phi):
     return y_pred, u, sigma_diag
 
 
-# ---------- 4h. SCW — full Σ ----------
+# ---------- 4h. SCW — full \Sigma ----------
 @njit(cache=True)
 def _scw_full_kernel(X, y, perm, u, Sigma, C, phi):
     """SCW-I (full covariance) inner loop — tracks feature correlations.
@@ -1369,7 +1369,7 @@ def _find_idx(sv_ids, n_sv, val):
 #                                                                        
 #   Single-pass over data.  Each sample that triggers an update is       
 #   stored as a support vector.  Prediction at sample i uses all SVs     
-#   collected so far: f(x) = Σ_j α_j k(x, sv_j).                       
+#   collected so far: f(x) = \Sigma_j \alpha_j k(x, sv_j).                       
 #   Returns y_pred array only (no weight vector in kernel space).        
 # ═══════════════════════════════════════════════════════════════════════
 
