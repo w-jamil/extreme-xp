@@ -837,7 +837,7 @@ def PA(X, y, max_epochs=1, patience=3, X_val=None, y_val=None):
     Scans through the data one sample at a time.  When a sample is
     mis-classified (or classified with low confidence), the model
     makes the *minimum* weight change needed to fix it.  The name
-    "passive-aggressive" comes from this: it is passive (no change)
+    "passive-aggressive" comes from this it is passive (no change)
     when correct, and aggressive (exact correction) when wrong.
 
     No hyperparameters to tune — fully automatic.
@@ -1860,6 +1860,7 @@ def _batch_gc_fit(X, y, gamma, max_sv, pos_weight, neg_weight, epochs):
     sv_alpha = np.empty(max_sv)
     sv_ids = np.full(max_sv, -1, dtype=np.int64)
     sv_grad_sum = np.zeros(max_sv)
+    sv_count = np.zeros(max_sv, dtype=np.int64)  # per-SV update count (fix)
     n_sv = 0
     t = 0
 
@@ -1881,15 +1882,17 @@ def _batch_gc_fit(X, y, gamma, max_sv, pos_weight, neg_weight, epochs):
             idx = _find_idx(sv_ids, n_sv, i)
             if idx >= 0:
                 sv_grad_sum[idx] += grad
-                avg_grad = sv_grad_sum[idx] / t
-                sv_alpha[idx] = -np.sqrt(t) * avg_grad
+                sv_count[idx] += 1
+                local_t = sv_count[idx]
+                avg_grad = sv_grad_sum[idx] / local_t  # use per-SV count
+                sv_alpha[idx] = -np.sqrt(local_t) * avg_grad
             elif grad != 0.0:
                 if n_sv < max_sv:
                     for f in range(d):
                         sv_X[n_sv, f] = X[i, f]
                     sv_grad_sum[n_sv] = grad
-                    avg_grad = grad / t
-                    sv_alpha[n_sv] = -np.sqrt(t) * avg_grad
+                    sv_count[n_sv] = 1
+                    sv_alpha[n_sv] = -grad  # sqrt(1)*grad/1
                     sv_ids[n_sv] = i
                     n_sv += 1
                 # budget: remove smallest |alpha|
@@ -1900,14 +1903,104 @@ def _batch_gc_fit(X, y, gamma, max_sv, pos_weight, neg_weight, epochs):
                         if abs(sv_alpha[j]) < min_val:
                             min_val = abs(sv_alpha[j])
                             min_j = j
-                    # shift left to remove min_j
                     for j in range(min_j, n_sv - 1):
                         for f in range(d):
                             sv_X[j, f] = sv_X[j + 1, f]
                         sv_alpha[j] = sv_alpha[j + 1]
                         sv_ids[j] = sv_ids[j + 1]
                         sv_grad_sum[j] = sv_grad_sum[j + 1]
+                        sv_count[j] = sv_count[j + 1]
                     n_sv -= 1
+    return sv_X[:n_sv].copy(), sv_alpha[:n_sv].copy()
+
+
+@njit(cache=True)
+def _fisher_yates(n):
+    """Return a random permutation of 0..n-1 (Fisher-Yates in Numba)."""
+    perm = np.arange(n)
+    for i in range(n - 1, 0, -1):
+        j = np.random.randint(0, i + 1)
+        tmp = perm[i]
+        perm[i] = perm[j]
+        perm[j] = tmp
+    return perm
+
+
+@njit(cache=True)
+def _batch_ogc_fit(X, y, gamma, max_sv, pos_weight, neg_weight, epochs):
+    """Batch kernel OGC — the kernel/RKHS counterpart of online OGC.
+
+    Mirrors the OGC update rule in reproducing kernel Hilbert space:
+
+        alpha[x_i] += (y_i - hat_y_i) * class_weight / ||phi(x_i)||
+
+    For the RBF kernel, ||phi(x_i)|| = sqrt(k(x_i, x_i)) = 1, so the
+    update simplifies to (y_i - hat_y_i) * class_weight.  On a correct
+    prediction (y == hat_y) the update is zero, matching OGC's behaviour
+    of issuing a non-zero step only on misclassified examples.
+
+    Budget management: when the SV set is full, the SV with the smallest
+    |alpha| is evicted (same strategy as KernelPA / KernelAROW).
+
+    Parameters
+    ----------
+    X, y         : training data, labels in {-1, +1}
+    gamma        : RBF bandwidth
+    max_sv       : maximum number of support vectors retained
+    pos_weight   : class weight for y=+1  (= n / (2 * n_pos))
+    neg_weight   : class weight for y=-1  (= n / (2 * n_neg))
+    epochs       : number of full passes; data is shuffled before each pass
+    """
+    n, d = X.shape
+    sv_X   = np.empty((max_sv, d))
+    sv_alpha = np.zeros(max_sv)
+    sv_ids   = np.full(max_sv, -1, dtype=np.int64)
+    n_sv = 0
+
+    for epoch in range(epochs):
+        perm = _fisher_yates(n)
+        for ii in range(n):
+            i = perm[ii]
+
+            # Compute current score f(x_i) = sum_j alpha_j * k(x_j, x_i)
+            score = 0.0
+            if n_sv > 0:
+                k = _rbf_vec(X[i], sv_X, gamma, n_sv, d)
+                for j in range(n_sv):
+                    score += k[j] * sv_alpha[j]
+
+            # OGC prediction: sign(score)
+            hat_y = 1.0 if score > 0.0 else -1.0
+
+            # OGC update: delta = (y_i - hat_y_i) * class_weight
+            # Non-zero only on misclassification (mirroring online OGC)
+            delta = y[i] - hat_y          # 0 if correct, ±2 if wrong
+            if delta != 0.0:
+                w = pos_weight if y[i] == 1.0 else neg_weight
+                update = delta * w        # class-reweighted gradient step
+
+                idx = _find_idx(sv_ids, n_sv, i)
+                if idx >= 0:
+                    sv_alpha[idx] += update
+                elif n_sv < max_sv:
+                    for f in range(d):
+                        sv_X[n_sv, f] = X[i, f]
+                    sv_alpha[n_sv] = update
+                    sv_ids[n_sv]   = i
+                    n_sv += 1
+                else:
+                    # Budget full: evict SV with smallest |alpha|
+                    min_j   = 0
+                    min_val = abs(sv_alpha[0])
+                    for j in range(1, n_sv):
+                        if abs(sv_alpha[j]) < min_val:
+                            min_val = abs(sv_alpha[j])
+                            min_j   = j
+                    for f in range(d):
+                        sv_X[min_j, f] = X[i, f]
+                    sv_alpha[min_j] = update
+                    sv_ids[min_j]   = i
+
     return sv_X[:n_sv].copy(), sv_alpha[:n_sv].copy()
 
 
@@ -2180,15 +2273,36 @@ class KernelAROW:
 
 
 class KernelGC:
-    """Batch Kernel Gradient Classification — Numba-accelerated."""
+    """Multi-kernel batch OGC ensemble — kernel extension of online OGC.
 
-    def __init__(self, gamma=0.1, max_sv=1000):
+    Trains n_ensemble independent kernel OGC models, each with a geometrically-
+    spread gamma value around the tuned gamma (multi-kernel learning).  The
+    update rule mirrors OGC in RKHS: alpha[i] += (y_i - hat_y_i) * w_class,
+    where hat_y_i = sign(f(x_i)) and ||phi(x_i)||=1 for the RBF kernel.
+    Decision scores are averaged before thresholding (F-beta optimised,
+    beta=1.5 to weight recall over precision).
+    """
+
+    def __init__(self, gamma=0.1, max_sv=1000, n_epochs=30,
+                 n_ensemble=5, gamma_spread=2.0):
         self.gamma = gamma
         self.max_sv = max_sv
-        self.support_vectors = None
-        self.alpha = None
+        self.n_epochs = n_epochs
+        self.n_ensemble = n_ensemble
+        self.gamma_spread = gamma_spread
+        self._members = []   # list of (support_vectors, alpha, gamma_used)
+        self.threshold = 0.0
 
-    def fit(self, X, y, epochs=3):
+    def _member_gammas(self):
+        """Return n_ensemble gammas spread geometrically around self.gamma."""
+        if self.n_ensemble == 1:
+            return [self.gamma]
+        log_spread = np.log(self.gamma_spread)
+        log_gammas = np.linspace(-log_spread, log_spread, self.n_ensemble)
+        return [self.gamma * np.exp(lg) for lg in log_gammas]
+
+    def fit(self, X, y, epochs=1):
+        actual_epochs = max(epochs, self.n_epochs)
         X_c = np.ascontiguousarray(X, dtype=np.float64)
         y_c = np.ascontiguousarray(y, dtype=np.float64)
         n_pos = np.sum(y_c == 1.0)
@@ -2196,18 +2310,48 @@ class KernelGC:
         n = len(y_c)
         pw = n / (2.0 * n_pos) if n_pos > 0 else 1.0
         nw = n / (2.0 * n_neg) if n_neg > 0 else 1.0
-        sv, al = _batch_gc_fit(X_c, y_c, self.gamma, self.max_sv, pw, nw, epochs)
-        self.support_vectors = sv
-        self.alpha = al
+        self._members = []
+        for g in self._member_gammas():
+            sv, al = _batch_ogc_fit(X_c, y_c, g, self.max_sv,
+                                    pw, nw, actual_epochs)
+            self._members.append((sv, al, g))
+        # Tune decision threshold on training data (F-beta, beta=1.5)
+        scores = self.decision_function(X_c)
+        beta_sq = 1.5 ** 2
+        best_t, best_fb = 0.0, -1.0
+        for t in np.percentile(scores, np.arange(1, 100, 1)):
+            preds = np.where(scores >= t, 1, -1)
+            tp = np.sum((preds == 1) & (y_c == 1))
+            fp = np.sum((preds == 1) & (y_c == -1))
+            fn = np.sum((preds == -1) & (y_c == 1))
+            prec = tp / (tp + fp + 1e-9)
+            rec  = tp / (tp + fn + 1e-9)
+            fb   = (1 + beta_sq) * prec * rec / (beta_sq * prec + rec + 1e-9)
+            if fb > best_fb:
+                best_fb = fb
+                best_t = t
+        self.threshold = best_t
         return self
 
     def decision_function(self, X):
-        if self.support_vectors is None or len(self.support_vectors) == 0:
+        if not self._members:
             return np.zeros(len(X))
-        return rbf_kernel_matrix(X, self.support_vectors, self.gamma) @ self.alpha
+        scores = np.zeros(len(X))
+        for sv, al, g in self._members:
+            if len(sv) > 0:
+                scores += rbf_kernel_matrix(X, sv, g) @ al
+        return scores / len(self._members)
 
     def predict(self, X):
-        return np.where(self.decision_function(X) >= 0, 1, -1)
+        return np.where(self.decision_function(X) >= self.threshold, 1, -1)
+
+    @property
+    def support_vectors(self):
+        """Return support vectors of the centre ensemble member (for SV count)."""
+        if not self._members:
+            return None
+        mid = len(self._members) // 2
+        return self._members[mid][0]
 
 
 class KernelRDA:

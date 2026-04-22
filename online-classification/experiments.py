@@ -2,14 +2,12 @@
 """
 experiments.py — Experiment runners and data utilities.
 
-Three experiment modes
----------------------
+Two experiment modes
+--------------------
 1. run_simulation()       — 11 synthetic datasets 3 imbalance ratios
                             compares Online vs Kernel Online algorithms.
 2. run_online_benchmark() — Real datasets (MNIST, Kaggle, Cybersecurity)
                             runs 7 Numba-accelerated online algorithms.
-3. run_kernel_benchmark() — UCI datasets (ClevelandHeart)
-                            runs 7 batch-kernel algorithms with repeated shuffles.
 """
 
 import numpy as np
@@ -23,6 +21,11 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import (
     f1_score, accuracy_score, precision_score, recall_score, confusion_matrix,
 )
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, ExtraTreesClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.neural_network import MLPClassifier
+from sklearn.neighbors import KNeighborsClassifier
 from scipy.stats import norm
 
 # All algorithms live in algos.py
@@ -321,7 +324,7 @@ def inject_outliers(X, y, outlier_ratio=0.05, outlier_scale=10.0, seed=42):
 # ═══════════════════════════════════════════════════════════════════════
 #   SECTION 3 — REAL DATA LOADERS                                      
 #                                                                       
-#   All data is read from local parquet files — no downloads.           
+#   All data is read from local parquet files — no downloads           
 # ═══════════════════════════════════════════════════════════════════════
 
 def load_cybersecurity_data(file_path):
@@ -434,13 +437,13 @@ def load_mnist_data(file_path):
 def load_unsw_data(data_dir):
     """Load UNSW_NB15 from separate train/test parquets, scale features.
 
-    Expects data_dir/kernel/UNSW_NB15_train.parquet and
-    data_dir/kernel/UNSW_NB15_test.parquet.
+    Expects data_dir/UNSW_NB15_train.parquet and
+    data_dir/UNSW_NB15_test.parquet.
 
     Returns (X_train, y_train, X_test, y_test) with labels in {-1, +1}.
     """
-    train_path = os.path.join(data_dir, 'kernel', 'UNSW_NB15_train.parquet')
-    test_path = os.path.join(data_dir, 'kernel', 'UNSW_NB15_test.parquet')
+    train_path = os.path.join(data_dir, 'UNSW_NB15_train.parquet')
+    test_path = os.path.join(data_dir, 'UNSW_NB15_test.parquet')
     df_tr = pd.read_parquet(train_path).dropna()
     df_te = pd.read_parquet(test_path).dropna()
     feat_cols = [c for c in df_tr.columns if c != 'label']
@@ -454,6 +457,72 @@ def load_unsw_data(data_dir):
     print(f"  Train: {len(X_train):,} samples, Test: {len(X_test):,} samples")
     print(f"  Train attack ratio: {(y_train==1).sum()/len(y_train):.4f}")
     print(f"  Test  attack ratio: {(y_test==1).sum()/len(y_test):.4f}")
+    return X_train, y_train, X_test, y_test
+
+
+
+def load_breast_cancer_wisconsin_data(data_dir):
+    """Load BreastCancerWisconsin from separate train/test parquets, scale features.
+
+    Expects data_dir/kernel/BreastCancerWisconsin_train.parquet and
+    data_dir/kernel/BreastCancerWisconsin_test.parquet.
+
+    Binary label: Malignant = 1, Benign = 0 (mapped to +1/-1 internally).
+    """
+    train_path = os.path.join(data_dir, 'kernel', 'BreastCancerWisconsin_train.parquet')
+    test_path  = os.path.join(data_dir, 'kernel', 'BreastCancerWisconsin_test.parquet')
+    df_tr = pd.read_parquet(train_path).dropna()
+    df_te = pd.read_parquet(test_path).dropna()
+    feat_cols = [c for c in df_tr.columns if c != 'label']
+    X_train = df_tr[feat_cols].values.astype(np.float64)
+    X_test  = df_te[feat_cols].values.astype(np.float64)
+    y_train = np.where(df_tr['label'].values == 0, -1, 1)
+    y_test  = np.where(df_te['label'].values == 0, -1, 1)
+
+    n_tr, n_te = len(y_train), len(y_test)
+    pos_tr = (y_train == 1).sum()
+    pos_te = (y_test  == 1).sum()
+    print(f"  Train: {n_tr} samples | Malignant: {pos_tr} ({100*pos_tr/n_tr:.1f}%)  "
+          f"Benign: {n_tr-pos_tr} ({100*(n_tr-pos_tr)/n_tr:.1f}%)")
+    print(f"  Test:  {n_te} samples | Malignant: {pos_te} ({100*pos_te/n_te:.1f}%)  "
+          f"Benign: {n_te-pos_te} ({100*(n_te-pos_te)/n_te:.1f}%)")
+
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test  = scaler.transform(X_test)
+    return X_train, y_train, X_test, y_test
+
+
+def load_indian_liver_patient_data(data_dir):
+    """Load Indian Liver Patient (ILPD) from separate train/test parquets, scale features.
+
+    Expects data_dir/kernel/IndianLiverPatient_train.parquet and
+    data_dir/kernel/IndianLiverPatient_test.parquet.
+
+    Binary label: 1 = liver patient (+1), 2 = no disease (0 → -1).
+    Gender already encoded (Female=0, Male=1).
+    """
+    train_path = os.path.join(data_dir, 'kernel', 'IndianLiverPatient_train.parquet')
+    test_path  = os.path.join(data_dir, 'kernel', 'IndianLiverPatient_test.parquet')
+    df_tr = pd.read_parquet(train_path).dropna()
+    df_te = pd.read_parquet(test_path).dropna()
+    feat_cols = [c for c in df_tr.columns if c != 'label']
+    X_train = df_tr[feat_cols].values.astype(np.float64)
+    X_test  = df_te[feat_cols].values.astype(np.float64)
+    y_train = np.where(df_tr['label'].values == 0, -1, 1)
+    y_test  = np.where(df_te['label'].values == 0, -1, 1)
+
+    n_tr, n_te = len(y_train), len(y_test)
+    pos_tr = (y_train == 1).sum()
+    pos_te = (y_test  == 1).sum()
+    print(f"  Train: {n_tr} samples | Liver patient: {pos_tr} ({100*pos_tr/n_tr:.1f}%)  "
+          f"Healthy: {n_tr-pos_tr} ({100*(n_tr-pos_tr)/n_tr:.1f}%)")
+    print(f"  Test:  {n_te} samples | Liver patient: {pos_te} ({100*pos_te/n_te:.1f}%)  "
+          f"Healthy: {n_te-pos_te} ({100*(n_te-pos_te)/n_te:.1f}%)")
+
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test  = scaler.transform(X_test)
     return X_train, y_train, X_test, y_test
 
 
@@ -799,7 +868,8 @@ def run_online_benchmark(data_dir, output_dir=None):
         'AdaRDA':    lambda X, y: AdaRDA(X, y, lambda_param=1, eta_param=1, delta_param=1),
     }
 
-    files = sorted(glob.glob(os.path.join(data_dir, '*.parquet')))
+    files = sorted(f for f in glob.glob(os.path.join(data_dir, '*.parquet'))
+                   if 'MITBIH' not in os.path.basename(f))
     if not files:
         print(f"FATAL: no parquet files in {data_dir}")
         return pd.DataFrame()
@@ -899,9 +969,9 @@ def run_online_benchmark(data_dir, output_dir=None):
             except Exception as e:
                 print(f"    ERROR: {e}")
 
-    # ---- UNSW_NB15 (separate train/test parquets in kernel/) ----
-    unsw_train_path = os.path.join(data_dir, 'kernel', 'UNSW_NB15_train.parquet')
-    unsw_test_path = os.path.join(data_dir, 'kernel', 'UNSW_NB15_test.parquet')
+    # ---- UNSW_NB15 (separate train/test parquets in data/) ----
+    unsw_train_path = os.path.join(data_dir, 'UNSW_NB15_train.parquet')
+    unsw_test_path = os.path.join(data_dir, 'UNSW_NB15_test.parquet')
     if os.path.exists(unsw_train_path) and os.path.exists(unsw_test_path):
         ds_name = 'UNSW_NB15'
         print("\n" + "=" * 60)
@@ -924,6 +994,53 @@ def run_online_benchmark(data_dir, output_dir=None):
                 # Continue online on test set: predict-then-update
                 yp, _ = _online_pass(aname, X_te, y_te, w)
                 p, r, fnr, fpr, f1 = calculate_class1_metrics(y_te, yp)
+                print(f"    Prec={p:.4f}  Rec={r:.4f}  F1={f1:.4f}")
+                all_results.append({'Dataset': ds_name, 'Algorithm': aname,
+                                    'Precision': p, 'Recall': r, 'F1': f1,
+                                    'FNR': fnr, 'FPR': fpr})
+            except Exception as e:
+                print(f"    ERROR: {e}")
+                all_results.append({'Dataset': ds_name, 'Algorithm': aname,
+                                    'Precision': np.nan, 'Recall': np.nan,
+                                    'F1': np.nan, 'FNR': np.nan, 'FPR': np.nan})
+
+    # ---- MIT-BIH Arrhythmia (pure online: 1 pass over combined train+test) ----
+    # Labels: label=0 → normal → -1,  label=1 → arrhythmia → +1
+    # Sequential pass: train first (87,554), then test (21,892).
+    # Metrics reported on the test portion only.
+    mitbih_train_path = os.path.join(data_dir, 'MITBIH_Arrhythmia_train.parquet')
+    mitbih_test_path  = os.path.join(data_dir, 'MITBIH_Arrhythmia_test.parquet')
+    if os.path.exists(mitbih_train_path) and os.path.exists(mitbih_test_path):
+        ds_name = 'MITBIH_Arrhythmia'
+        print("\n" + "=" * 60)
+        print(f"Dataset: {ds_name} (parquet, 1-pass online, train→test)")
+        print("=" * 60)
+        _tr = pd.read_parquet(mitbih_train_path)
+        _te = pd.read_parquet(mitbih_test_path)
+        X_tr_m = _tr.drop('label', axis=1).values.astype(np.float64)
+        y_tr_m = np.where(_tr['label'].values == 0, -1.0, 1.0)
+        X_te_m = _te.drop('label', axis=1).values.astype(np.float64)
+        y_te_m = np.where(_te['label'].values == 0, -1.0, 1.0)
+        n_pos_tr = int((y_tr_m == 1).sum())
+        n_neg_tr = int((y_tr_m == -1).sum())
+        n_pos_te = int((y_te_m == 1).sum())
+        n_neg_te = int((y_te_m == -1).sum())
+        print(f"  Train: {len(y_tr_m):,} samples | Arrhythmia: {n_pos_tr:,} ({100*n_pos_tr/len(y_tr_m):.1f}%)  "
+              f"Normal: {n_neg_tr:,} ({100*n_neg_tr/len(y_tr_m):.1f}%)")
+        print(f"  Test:  {len(y_te_m):,} samples | Arrhythmia: {n_pos_te:,} ({100*n_pos_te/len(y_te_m):.1f}%)  "
+              f"Normal: {n_neg_te:,} ({100*n_neg_te/len(y_te_m):.1f}%)")
+        # Concatenate in temporal order: train then test
+        X_all_m = np.vstack([X_tr_m, X_te_m])
+        y_all_m = np.concatenate([y_tr_m, y_te_m])
+        n_train_m = len(y_tr_m)
+        d_m = X_all_m.shape[1]
+        for aname in ['PA', 'Perceptron', 'OGC', 'AROW', 'RDA', 'SCW', 'AdaRDA']:
+            print(f"  Running {aname} (1 online pass: train→test, predict-then-learn) ...")
+            try:
+                w_init = np.zeros(d_m, dtype=np.float64)
+                yp_all, _ = _online_pass(aname, X_all_m, y_all_m, w_init)
+                yp = yp_all[n_train_m:]   # evaluate on test portion only
+                p, r, fnr, fpr, f1 = calculate_class1_metrics(y_te_m, yp)
                 print(f"    Prec={p:.4f}  Rec={r:.4f}  F1={f1:.4f}")
                 all_results.append({'Dataset': ds_name, 'Algorithm': aname,
                                     'Precision': p, 'Recall': r, 'F1': f1,
@@ -1020,16 +1137,26 @@ def plot_online_benchmark_f1(results_csv_or_df, output_dir=None, figsize=(14, 6)
         bars = ax.bar(x + offset, f1_vals, bar_width, label=algo,
                       color=color, edgecolor='white', linewidth=0.5)
 
-    # Format x-axis labels (cleaner dataset names)
-    dataset_labels = []
-    for ds in datasets:
-        label = ds.replace('_combined', '').replace('_kaggle', '')
-        # Wrap long names
-        if len(label) > 12:
-            parts = label.split('_')
-            if len(parts) > 1:
-                label = '\n'.join(parts)
-        dataset_labels.append(label)
+    # Format x-axis labels (short, clean names)
+    _name_map = {
+        'CreditFraud_kaggle':    'Fraud',
+        'MNIST_combined':        'MNIST',
+        'UNSW_NB15':             'UNSW',
+        'MITBIH_Arrhythmia':     'MITBIH',
+        'Crypto_desktop':        'DCrypto',
+        'Crypto_smartphone':     'SCrypto',
+        'NonEnc_desktop':        'DEnc',
+        'NonEnc_smartphone':     'SEnc',
+        'OutFlash_desktop':      'DFlash',
+        'OutFlash_smartphone':   'SFlash',
+        'OutTLS_desktop':        'DTls',
+        'OutTLS_smartphone':     'STls',
+        'P2P_desktop':           'DP2P',
+        'P2P_smartphone':        'SP2P',
+        'Phishing_desktop':      'DPhis',
+        'Phishing_smartphone':   'SPhish',
+    }
+    dataset_labels = [_name_map.get(ds, ds) for ds in datasets]
 
     ax.set_xticks(x)
     ax.set_xticklabels(dataset_labels, fontsize=11, rotation=0)
@@ -1055,356 +1182,10 @@ def plot_online_benchmark_f1(results_csv_or_df, output_dir=None, figsize=(14, 6)
     plt.close()
 
 
-# ═══════════════════════════════════════════════════════════════════════
-#   EXPERIMENT 3 — BATCH KERNEL BENCHMARK  (UCI datasets, repeated)    
-# ═══════════════════════════════════════════════════════════════════════
-
-# Datasets in data/kernel/ that should be evaluated
-# Note: HeartDisease_UCI removed (corrupted - all labels=0)
-#       ClevelandHeart_UCI is the correct Cleveland Heart Disease dataset
-KERNEL_DATASETS = [
-    'ClevelandHeart_UCI',
-]
-
-
-def _get_batch_kernel_algos(gamma_val, max_sv):
-    """Factory for the 7 batch-kernel algorithms with given gamma."""
-    return {
-        'KernelPerceptron': lambda: KernelPerceptron(gamma=gamma_val, max_sv=max_sv),
-        'KernelPA':         lambda: KernelPA(gamma=gamma_val, max_sv=max_sv, C=1.0),
-        'KernelAROW':       lambda: KernelAROW(gamma=gamma_val, r=1.0, max_sv=min(max_sv, 500)),
-        'KernelGC':         lambda: KernelGC(gamma=gamma_val, max_sv=max_sv),
-        'KernelRDA':        lambda: KernelRDA(gamma=gamma_val, lambda_param=0.01, max_sv=min(max_sv, 500)),
-        'KernelSCW':        lambda: KernelSCW(gamma=gamma_val, C=1.0, phi=0.5, max_sv=min(max_sv, 500)),
-        'KernelAdaRDA':     lambda: KernelAdaRDA(gamma=gamma_val, lambda_param=0.01, max_sv=min(max_sv, 500)),
-    }
-
-
-def run_kernel_benchmark(data_dir, output_dir=None, n_repeats=100,
-                         gamma='tune', max_sv=1000, epochs=1,
-                         test_ratio=0.3, datasets=None):
-    """Run batch-kernel algorithms on UCI datasets with repeated random shuffles.
-
-    For each dataset:
-      1. Load raw data once.
-      2. On the first repeat, tune gamma (grid search) unless a fixed value is given.
-      3. Shuffle → split → scale → fit all algorithms → evaluate on test set.
-      4. Repeat n_repeats times.
-      5. Report mean ± std for each algorithm.
-
-    Results and per-shuffle F1 curves are saved to output_dir.
-    """
-    np.random.seed(42)
-
-    ds_list = datasets or KERNEL_DATASETS
-    kernel_data_dir = os.path.join(data_dir, 'kernel')
-    all_results, per_shuffle = [], []
-
-    for ds_name in ds_list:
-        parquet_path = os.path.join(kernel_data_dir, f'{ds_name}.parquet')
-        if not os.path.exists(parquet_path):
-            print(f"  SKIP: {parquet_path} not found")
-            continue
-        print("\n" + "=" * 70)
-        print(f"DATASET: {ds_name} ({n_repeats} repeats, "
-              f"{int((1-test_ratio)*100)}/{int(test_ratio*100)} split)")
-        print("=" * 70)
-
-        # Load raw data
-        df = pd.read_parquet(parquet_path).dropna()
-        X_raw = df.drop('label', axis=1).values.astype(np.float64)
-        y_raw = np.where(df['label'].values == 0, -1, 1)
-        print(f"  Total: {len(X_raw)}, +1: {(y_raw==1).sum()} ({100*(y_raw==1).mean():.1f}%)")
-
-        algo_metrics = {n: {'Precision': [], 'Recall': [], 'F1': [], 'FPR': [], 'SVs': []}
-                        for n in _get_batch_kernel_algos(0.1, max_sv)}
-
-        gamma_val = None
-        for rep in range(n_repeats):
-            np.random.seed(rep * 42)
-            idx = np.random.permutation(len(X_raw))
-            split = int(len(X_raw) * (1 - test_ratio))
-            X_tr = X_raw[idx[:split]]
-            y_tr = y_raw[idx[:split]]
-            X_te = X_raw[idx[split:]]
-            y_te = y_raw[idx[split:]]
-            scaler = StandardScaler()
-            X_tr = scaler.fit_transform(X_tr)
-            X_te = scaler.transform(X_te)
-
-            if rep == 0:
-                if gamma == 'tune':
-                    gamma_val = tune_gamma(X_tr, y_tr, max_sv=min(100, max_sv), epochs=1)
-                elif gamma == 'auto':
-                    gamma_val = 1.0 / (X_tr.shape[1] * X_tr.var() + 1e-8)
-                else:
-                    gamma_val = float(gamma) if isinstance(gamma, str) else gamma
-                print(f"  Using gamma = {gamma_val:.6f}")
-
-            algos = _get_batch_kernel_algos(gamma_val, max_sv)
-            for name, factory in algos.items():
-                algo = factory()
-                algo.fit(X_tr, y_tr, epochs=epochs)
-                yp = algo.predict(X_te)
-                m = evaluate(y_te, yp)
-                n_sv = len(algo.support_vectors) if algo.support_vectors is not None else 0
-                algo_metrics[name]['Precision'].append(m['Precision'])
-                algo_metrics[name]['Recall'].append(m['Recall'])
-                algo_metrics[name]['F1'].append(m['F1'])
-                algo_metrics[name]['FPR'].append(m['FPR'])
-                algo_metrics[name]['SVs'].append(n_sv)
-                per_shuffle.append({'Dataset': ds_name, 'Algorithm': name,
-                                    'Shuffle': rep + 1, 'F1': m['F1']})
-            print(f"  Repeat {rep+1}/{n_repeats} done", end='\r')
-        print()
-
-        # Print averaged results
-        print(f"\n  {'Algorithm':<20} {'Prec':>10} {'Recall':>10} {'F1':>10} {'SVs':>8}")
-        print("  " + "-" * 60)
-        for name in algo_metrics:
-            pm = np.mean(algo_metrics[name]['Precision'])
-            ps = np.std(algo_metrics[name]['Precision'])
-            rm = np.mean(algo_metrics[name]['Recall'])
-            fm = np.mean(algo_metrics[name]['F1'])
-            fs = np.std(algo_metrics[name]['F1'])
-            svm = np.mean(algo_metrics[name]['SVs'])
-            print(f"  {name:<20} {pm:.4f}+/-{ps:.2f} {rm:.4f}     {fm:.4f}+/-{fs:.2f} {svm:>6.0f}")
-            # Use same column names as online benchmark for consistency
-            all_results.append({
-                'Dataset': ds_name, 'Algorithm': name,
-                'Precision': pm, 'Recall': rm, 'F1': fm,
-                'FNR': 1.0 - rm, 'FPR': np.mean(algo_metrics[name]['FPR']),
-            })
-
-    # Save
-    df_res = pd.DataFrame(all_results)
-    df_per_shuffle = pd.DataFrame(per_shuffle)
-    if output_dir and len(df_res):
-        os.makedirs(output_dir, exist_ok=True)
-        df_res.to_csv(os.path.join(output_dir, 'kernel_benchmark_results.csv'),
-                       index=False, float_format='%.4f')
-        df_per_shuffle.to_csv(
-            os.path.join(output_dir, 'kernel_per_shuffle_f1.csv'),
-            index=False, float_format='%.4f')
-        print(f"\nResults saved to {output_dir}/")
-    return df_res, df_per_shuffle
-
-
-# ═══════════════════════════════════════════════════════════════════════
-#   PLOTTING FUNCTIONS FOR KERNEL SIM                         
-# ═══════════════════════════════════════════════════════════════════════
-
-
-
-def plot_kernel_imbalance_analysis(results_csv_or_df, output_dir=None,
-                                   datasets=None, figsize=(14, 11)):
-    """Generate imbalance ratio analysis plot for kernel benchmark.
-
-    Creates a 2x2 grid similar to the simulation imbalance plot:
-    - Left column: Bar charts comparing all algorithms across datasets
-    - Right column: Line charts for top 3 algorithms
-
-    Parameters
-    ----------
-    results_csv_or_df : str or DataFrame
-        Path to kernel_benchmark_results.csv or the DataFrame directly
-    output_dir : str
-        Directory to save the plot
-    datasets : list
-        List of dataset names to include (acts as "imbalance levels")
-    """
-    import matplotlib
-    matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
-
-    # Load data
-    if isinstance(results_csv_or_df, str):
-        df = pd.read_csv(results_csv_or_df)
-    else:
-        df = results_csv_or_df.copy()
-
-    if datasets is None:
-        datasets = df['Dataset'].unique().tolist()
-
-    # Filter to requested datasets
-    df = df[df['Dataset'].isin(datasets)]
-    if len(df) == 0:
-        print("No matching datasets found for plotting.")
-        return
-
-    algo_names = df['Algorithm'].unique().tolist()
-    n_algos = len(algo_names)
-    n_datasets = len(datasets)
-
-    # Colors for each dataset (like imbalance ratios)
-    bar_colors = ['#b2dfb2', '#f4b6b6', '#a6cee3', '#fdbf6f', '#cab2d6'][:n_datasets]
-
-    fig, axes = plt.subplots(2, 2, figsize=figsize)
-
-    # ---- ROW 1: Mean F1 comparison ----
-    ax_bar = axes[0, 0]
-    ax_line = axes[0, 1]
-
-    bar_w = 0.8 / n_datasets
-    x = np.arange(n_algos)
-    f1_by_algo = {}
-
-    for k, ds in enumerate(datasets):
-        vals = []
-        for a in algo_names:
-            sub = df[(df['Algorithm'] == a) & (df['Dataset'] == ds)]
-            # Use 'F1' column (matching online benchmark format)
-            f1_val = sub['F1'].values[0] if len(sub) > 0 else 0.0
-            vals.append(f1_val)
-            f1_by_algo.setdefault(a, {})[ds] = f1_val
-
-        offset = (k - (n_datasets - 1) / 2) * bar_w
-        bars = ax_bar.bar(x + offset, vals, bar_w, label=ds,
-                          color=bar_colors[k], edgecolor='grey', linewidth=0.5)
-        # Add value labels on bars
-        for b, v in zip(bars, vals):
-            ax_bar.text(b.get_x() + b.get_width() / 2, b.get_height() + 0.005,
-                        f'{v:.2f}', ha='center', va='bottom', fontsize=8)
-
-    ax_bar.set_xticks(x)
-    ax_bar.set_xticklabels([a.replace('Kernel', '') for a in algo_names], fontsize=10)
-    ax_bar.set_ylabel('F1 Score', fontsize=12)
-    ax_bar.set_title('KERNEL: Algorithm Performance Comparison\nAcross Datasets',
-                     fontsize=13, fontweight='bold')
-    ax_bar.set_ylim(0, min(1.1, ax_bar.get_ylim()[1] + 0.1))
-    ax_bar.legend(fontsize=9, loc='lower right')
-    ax_bar.grid(axis='y', alpha=0.3)
-
-    # ---- Top-3 line chart (by average F1 across datasets) ----
-    avg_f1 = {a: np.mean(list(f1_by_algo[a].values())) for a in algo_names}
-    ranked = sorted(algo_names, key=lambda a: avg_f1[a], reverse=True)
-    top3 = ranked[:3]
-
-    markers = ['o', 's', '^']
-    line_styles = ['-', '--', '-.']
-    line_colors = ['#e41a1c', '#377eb8', '#ff7f00']
-
-    for j, algo in enumerate(top3):
-        y_vals = [f1_by_algo[algo].get(ds, 0) for ds in datasets]
-        ax_line.plot(range(n_datasets), y_vals, marker=markers[j],
-                     linestyle=line_styles[j], color=line_colors[j],
-                     linewidth=2.5, markersize=10, label=algo.replace('Kernel', ''))
-
-    ax_line.set_xticks(range(n_datasets))
-    ax_line.set_xticklabels([d.replace('_UCI', '').replace('_', '\n') for d in datasets],
-                           fontsize=10)
-    ax_line.set_ylabel('Mean F1 Score', fontsize=12)
-    ax_line.set_title(f'KERNEL Top 3:\n{", ".join([a.replace("Kernel", "") for a in top3])}',
-                      fontsize=13, fontweight='bold')
-    ax_line.legend(fontsize=11)
-    ax_line.grid(alpha=0.3)
-
-    # ---- ROW 2: Precision and Recall comparison ----
-    ax_prec = axes[1, 0]
-    ax_rec = axes[1, 1]
-
-    # Precision bars
-    for k, ds in enumerate(datasets):
-        vals = []
-        for a in algo_names:
-            sub = df[(df['Algorithm'] == a) & (df['Dataset'] == ds)]
-            # Use 'Precision' column (matching online benchmark format)
-            prec = sub['Precision'].values[0] if len(sub) > 0 else 0.0
-            vals.append(prec)
-        offset = (k - (n_datasets - 1) / 2) * bar_w
-        bars = ax_prec.bar(x + offset, vals, bar_w, label=ds,
-                           color=bar_colors[k], edgecolor='grey', linewidth=0.5)
-        for b, v in zip(bars, vals):
-            ax_prec.text(b.get_x() + b.get_width() / 2, b.get_height() + 0.005,
-                         f'{v:.2f}', ha='center', va='bottom', fontsize=8)
-
-    ax_prec.set_xticks(x)
-    ax_prec.set_xticklabels([a.replace('Kernel', '') for a in algo_names], fontsize=10)
-    ax_prec.set_ylabel('Precision', fontsize=12)
-    ax_prec.set_title('Precision Comparison', fontsize=13, fontweight='bold')
-    ax_prec.set_ylim(0, min(1.1, ax_prec.get_ylim()[1] + 0.1))
-    ax_prec.legend(fontsize=9, loc='lower right')
-    ax_prec.grid(axis='y', alpha=0.3)
-
-    # Recall bars
-    for k, ds in enumerate(datasets):
-        vals = []
-        for a in algo_names:
-            sub = df[(df['Algorithm'] == a) & (df['Dataset'] == ds)]
-            # Use 'Recall' column (matching online benchmark format)
-            rec = sub['Recall'].values[0] if len(sub) > 0 else 0.0
-            vals.append(rec)
-        offset = (k - (n_datasets - 1) / 2) * bar_w
-        bars = ax_rec.bar(x + offset, vals, bar_w, label=ds,
-                          color=bar_colors[k], edgecolor='grey', linewidth=0.5)
-        for b, v in zip(bars, vals):
-            ax_rec.text(b.get_x() + b.get_width() / 2, b.get_height() + 0.005,
-                        f'{v:.2f}', ha='center', va='bottom', fontsize=8)
-
-    ax_rec.set_xticks(x)
-    ax_rec.set_xticklabels([a.replace('Kernel', '') for a in algo_names], fontsize=10)
-    ax_rec.set_ylabel('Recall', fontsize=12)
-    ax_rec.set_title('Recall Comparison', fontsize=13, fontweight='bold')
-    ax_rec.set_ylim(0, min(1.1, ax_rec.get_ylim()[1] + 0.1))
-    ax_rec.legend(fontsize=9, loc='lower right')
-    ax_rec.grid(axis='y', alpha=0.3)
-
-    plt.tight_layout()
-
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
-        path = os.path.join(output_dir, 'kernel_dataset_analysis.png')
-        plt.savefig(path, dpi=150, bbox_inches='tight')
-        print(f"Kernel dataset analysis plot saved to: {path}")
-    plt.close()
-
-
-def run_kernel_benchmark_with_plots(data_dir, output_dir, n_repeats=30,
-                                    gamma='tune', max_sv=500, epochs=1,
-                                    test_ratio=0.3, datasets=None):
-    """Run kernel benchmark on specified datasets and generate all plots.
-
-    Convenience function that runs the benchmark and automatically generates:
-    1. Kernel benchmark F1 bar plot (similar to online_benchmark_f1.png)
-    2. Running F1 score plots across shuffles
-    3. Dataset comparison analysis plot (imbalance-style)
-
-    Parameters
-    ----------
-    data_dir : str
-        Directory containing data/kernel/*.parquet files
-    output_dir : str
-        Directory to save results and plots
-    n_repeats : int
-        Number of random shuffles per dataset
-    datasets : list
-        Datasets to benchmark (default: all 4 kernel datasets)
-    """
-    if datasets is None:
-        datasets = KERNEL_DATASETS
-
-    print("=" * 70)
-    print("KERNEL BENCHMARK WITH PLOTS")
-    print(f"Datasets: {datasets}")
-    print(f"Repeats: {n_repeats}, Epochs: {epochs}, Max SVs: {max_sv}")
-    print("=" * 70)
-
-    # Run the benchmark
-    df_res, df_per_shuffle = run_kernel_benchmark(
-        data_dir=data_dir,
-        output_dir=output_dir,
-        n_repeats=n_repeats,
-        gamma=gamma,
-        max_sv=max_sv,
-        epochs=epochs,
-        test_ratio=test_ratio,
-        datasets=datasets,
-    )
-
-    # Generate plots
-    if len(df_per_shuffle) > 0:
-        print("\nGenerating plots...")
-        plot_kernel_imbalance_analysis(df_res, output_dir, datasets)
-        print("All plots generated successfully!")
-
-    return df_res, df_per_shuffle
+# ── kernel batch experiment functions removed (not used in paper) ──
+def _kernel_stub(*a, **kw): raise NotImplementedError('kernel experiment removed')
+tune_gamma_for_gc = _kernel_stub
+_get_baseline_algos = _kernel_stub
+_get_batch_kernel_algos = _kernel_stub
+run_kernel_benchmark = _kernel_stub
+plot_kernel_imbalance_analysis = _kernel_stub
