@@ -5,6 +5,7 @@ from flask import Flask, render_template, jsonify, request, make_response
 import pandas as pd
 import numpy as np
 from sklearn.metrics import confusion_matrix
+from sklearn.preprocessing import StandardScaler
 import threading
 import time
 import logging
@@ -127,49 +128,139 @@ def OGC(X, y, initial_weights, eta=0.1):
         if y_actual * x.dot(w) < 1: w -= eta * (-y_actual * x)
     return w, y_pred
 
-def load_and_process_data(file_path):
-    """Loads and processes a single parquet file using the required aggregation logic."""
-    try:
-        df = pd.read_parquet(file_path)
-        
-        # Determine the correct time column name
-        if 'Time' in df.columns:
-            time_col = 'Time'
-        elif 'timestamp' in df.columns:
-            time_col = 'timestamp'
-        else:
-            raise KeyError("No time column found. Expected 'Time' or 'timestamp'.")
-        
-        # Determine the correct label column name
-        if 'Class' in df.columns:
-            label_col = 'Class'
-        elif 'label' in df.columns:
-            label_col = 'label'
-        else:
-            raise KeyError("No label column found. Expected 'Class' or 'label'.")
-        
-        df = df.sort_values([time_col]).reset_index(drop=True)
-        
+def _ogc_pretrain(X, y, eta=0.1):
+    """Single-pass OGC weight initialisation from training data (no UI updates)."""
+    w = np.zeros(X.shape[1], dtype=np.float64)
+    for i in range(len(X)):
+        x_i, y_i = X[i], y[i]
+        if y_i * x_i.dot(w) < 1:
+            w -= eta * (-y_i * x_i)
+    return w
+
+
+def detect_and_load_dataset(dataset_name, data_dir):
+    """Auto-detect dataset type from name and apply the correct loading strategy.
+
+    Returns
+    -------
+    X_stream : pd.DataFrame   — feature rows to stream through the simulation
+    y_stream : pd.Series      — corresponding labels
+    pretrained_weights : np.ndarray or None
+        Weights pre-trained on the training split (where applicable);
+        None for cybersecurity datasets that use prequential evaluation.
+
+    Dataset dispatch (mirrors experiments.py logic):
+      UNSW_NB15        → separate _train/_test parquets, StandardScaler, pretrain
+      MITBIH_Arrhythmia→ separate _train/_test parquets, pretrain (no scaling needed)
+      MNIST            → 80/20 shuffle split, binary label (≥5 → +1), pretrain
+      CreditFraud/Kaggle→ temporal 80/20 split, label col 'Class', pretrain
+      Cybersecurity    → single file grouped by timestamp, prequential (no pretrain)
+    """
+    # ── UNSW_NB15 ──────────────────────────────────────────────────────────────
+    if 'UNSW' in dataset_name.upper():
+        train_path = os.path.join(data_dir, 'UNSW_NB15_train.parquet')
+        test_path  = os.path.join(data_dir, 'UNSW_NB15_test.parquet')
+        df_tr = pd.read_parquet(train_path).dropna()
+        df_te = pd.read_parquet(test_path).dropna()
+        feat_cols = [c for c in df_tr.columns if c != 'label']
+        X_tr = df_tr[feat_cols].values.astype(np.float64)
+        X_te = df_te[feat_cols].values.astype(np.float64)
+        y_tr = np.where(df_tr['label'].values == 0, -1, 1)
+        y_te = np.where(df_te['label'].values == 0, -1, 1)
+        scaler = StandardScaler()
+        X_tr = scaler.fit_transform(X_tr)
+        X_te = scaler.transform(X_te)
+        pretrained_weights = _ogc_pretrain(X_tr, y_tr)
+        return pd.DataFrame(X_te, columns=feat_cols), pd.Series(y_te), pretrained_weights
+
+    # ── MITBIH Arrhythmia ──────────────────────────────────────────────────────
+    if 'MITBIH' in dataset_name.upper():
+        train_path = os.path.join(data_dir, 'MITBIH_Arrhythmia_train.parquet')
+        test_path  = os.path.join(data_dir, 'MITBIH_Arrhythmia_test.parquet')
+        df_tr = pd.read_parquet(train_path)
+        df_te = pd.read_parquet(test_path)
+        feat_cols = [c for c in df_tr.columns if c != 'label']
+        X_tr = df_tr[feat_cols].values.astype(np.float64)
+        X_te = df_te[feat_cols].values.astype(np.float64)
+        y_tr = np.where(df_tr['label'].values == 0, -1.0, 1.0)
+        y_te = np.where(df_te['label'].values == 0, -1.0, 1.0)
+        pretrained_weights = _ogc_pretrain(X_tr, y_tr)
+        return pd.DataFrame(X_te, columns=feat_cols), pd.Series(y_te), pretrained_weights
+
+    # ── MNIST ──────────────────────────────────────────────────────────────────
+    if 'MNIST' in dataset_name.upper():
+        fpath = os.path.join(data_dir, f'{dataset_name}.parquet')
+        df = pd.read_parquet(fpath)
+        df['label_binary'] = np.where(df['label'] >= 5, 1, -1)
+        df = df.sample(frac=1, random_state=42).reset_index(drop=True)
+        split = int(0.8 * len(df))
+        train_df, val_df = df.iloc[:split], df.iloc[split:]
+        feat_cols = [c for c in df.columns
+                     if c not in ['label', 'label_binary']
+                     and np.issubdtype(df[c].dtype, np.number)]
+        X_tr = train_df[feat_cols].values.astype(np.float64)
+        y_tr = train_df['label_binary'].values.astype(np.float64)
+        X_te = val_df[feat_cols].values.astype(np.float64)
+        y_te = val_df['label_binary'].values.astype(np.float64)
+        scaler = StandardScaler()
+        X_tr = scaler.fit_transform(X_tr)
+        X_te = scaler.transform(X_te)
+        pretrained_weights = _ogc_pretrain(X_tr, y_tr)
+        return pd.DataFrame(X_te, columns=feat_cols), pd.Series(y_te), pretrained_weights
+
+    # ── CreditFraud / Kaggle ───────────────────────────────────────────────────
+    if 'KAGGLE' in dataset_name.upper() or 'CREDITFRAUD' in dataset_name.upper():
+        fpath = os.path.join(data_dir, f'{dataset_name}.parquet')
+        df = pd.read_parquet(fpath)
         if 'user_id' in df.columns:
             df = df.drop(columns=['user_id'])
-        
-        x_df = df.groupby([time_col]).sum()
-        y_series = x_df[label_col].map(lambda x: 1 if x > 0 else -1)
-        x_df = x_df.drop(columns=[label_col])
-        return x_df, y_series
-    except Exception as e:
-        logging.error(f"Failed to load/process {file_path}: {e}")
-        raise
+        if 'Time' in df.columns:
+            df = df.sort_values('Time').reset_index(drop=True)
+        split_idx = int(0.8 * len(df))
+        train_data = df.iloc[:split_idx].copy()
+        test_data  = df.iloc[split_idx:].copy()
+        label_col  = 'Class' if 'Class' in df.columns else 'label'
+        drop_cols  = ['Time', 'timestamp', 'user_id', 'label', 'Class']
+        feat_cols  = [c for c in df.columns if c not in drop_cols]
+        X_tr = train_data[feat_cols].values.astype(np.float64)
+        X_te = test_data[feat_cols].values.astype(np.float64)
+        y_tr = np.where(train_data[label_col].values == 0, -1, 1)
+        y_te = np.where(test_data[label_col].values == 0, -1, 1)
+        scaler = StandardScaler()
+        X_tr = scaler.fit_transform(X_tr)
+        X_te = scaler.transform(X_te)
+        pretrained_weights = _ogc_pretrain(X_tr, y_tr)
+        return pd.DataFrame(X_te, columns=feat_cols), pd.Series(y_te), pretrained_weights
+
+    # ── Cybersecurity (single file, timestamp grouping, prequential) ───────────
+    fpath = os.path.join(data_dir, f'{dataset_name}.parquet')
+    df = pd.read_parquet(fpath)
+    time_col = ('Time' if 'Time' in df.columns
+                else 'timestamp' if 'timestamp' in df.columns
+                else None)
+    if time_col is None:
+        raise ValueError(f"No time column found in {dataset_name}")
+    if 'user_id' in df.columns:
+        df = df.drop(columns=['user_id'])
+    df = df.sort_values(time_col).reset_index(drop=True)
+    x_df = df.groupby(time_col).sum()
+    label_col = 'label' if 'label' in x_df.columns else 'Class'
+    y_series = x_df[label_col].map(lambda v: 1 if v > 0 else -1)
+    x_df = x_df.drop(columns=[label_col])
+    return x_df, y_series, None  # prequential — no pre-training
 
 # =============================================================================
 # SIMULATION STATE MANAGEMENT
 # =============================================================================
 class Simulation:
-    def __init__(self, dataset_name, X_data, y_data):
+    def __init__(self, dataset_name, X_data, y_data, pretrained_weights=None):
         self.dataset_name, self.X_data, self.y_data = dataset_name, X_data, y_data
         self.status, self.logs, self.alerts = "running", [], []
-        self.weights = np.zeros(X_data.shape[1])
+        self.weights = (pretrained_weights.copy()
+                        if pretrained_weights is not None
+                        else np.zeros(X_data.shape[1]))
         self.total_positives, self.total_negatives, self.false_positives, self.false_negatives = 0, 0, 0, 0
+        self.predicted_threats = 0  # tp + fp: times the model predicted a threat
         self.current_index = 0
         self.is_paused = False
         self.lock = threading.Lock()
@@ -201,10 +292,11 @@ class Simulation:
     def update_metrics(self, y_true, y_pred):
         try:
             tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[-1, 1]).ravel()
-            self.total_positives += (tp + fn)
-            self.total_negatives += (tn + fp)
+            self.total_positives += (tp + fn)      # actual positives (for FNR)
+            self.total_negatives += (tn + fp)      # actual negatives (for FPR)
             self.false_positives += fp
             self.false_negatives += fn
+            self.predicted_threats += (tp + fp)    # times model predicted +1
         except ValueError:
             self.logs.append(f"[{time.strftime('%H:%M:%S')}] Metrics Warning: Chunk had only one class.")
 
@@ -223,8 +315,8 @@ class Simulation:
                 "fnr": float(fnr),
                 "fpr": float(fpr),
                 "instances_processed": int(self.current_index),
-                "total_positives_seen": int(self.total_positives),
-                "total_negatives_seen": int(self.total_negatives),
+                "total_positives_seen": int(self.predicted_threats),
+                "total_negatives_seen": int(self.current_index) - int(self.predicted_threats),
                 "is_paused": self.is_paused
             }
 
@@ -347,13 +439,27 @@ def run_live_threat_detection(simulation_id):
 app = Flask(__name__)
 
 def find_available_datasets():
+    """Return canonical dataset names for all parquets found in DATA_DIRECTORY.
+
+    Paired files (e.g. UNSW_NB15_train / UNSW_NB15_test) are collapsed into a
+    single canonical entry (e.g. UNSW_NB15).
+    """
     if not os.path.exists(DATA_DIRECTORY):
         logging.error(f"Data directory '{DATA_DIRECTORY}' not found!")
         return []
     try:
-        files = [f.replace('.parquet', '') for f in os.listdir(DATA_DIRECTORY) 
-                 if f.endswith('.parquet') and 'MNIST' not in f.upper()]
-        return sorted(files)
+        datasets = set()
+        for f in os.listdir(DATA_DIRECTORY):
+            if not f.endswith('.parquet'):
+                continue
+            name = f.replace('.parquet', '')
+            # Collapse _train / _test pairs into their canonical name
+            if name.endswith('_train') or name.endswith('_test'):
+                canonical = name.rsplit('_', 1)[0]
+                datasets.add(canonical)
+            else:
+                datasets.add(name)
+        return sorted(datasets)
     except Exception as e:
         logging.error(f"Error scanning data directory: {e}")
         return []
@@ -371,17 +477,14 @@ def start_simulation():
     if not dataset_name:
         return jsonify({"status": "error", "message": "No dataset selected."}), 400
 
-    file_path = os.path.join(DATA_DIRECTORY, f"{dataset_name}.parquet")
-    if not os.path.exists(file_path):
-        return jsonify({"status": "error", "message": f"Data for {dataset_name} not found."}), 400
-
     try:
-        X_data, y_data = load_and_process_data(file_path)
+        X_data, y_data, pretrained_weights = detect_and_load_dataset(dataset_name, DATA_DIRECTORY)
     except Exception as e:
+        logging.error(f"Failed to load {dataset_name}: {e}")
         return jsonify({"status": "error", "message": f"Failed to load data for {dataset_name}: {e}"}), 400
-        
+
     simulation_id = str(uuid.uuid4())
-    sim_instance = Simulation(dataset_name, X_data, y_data)
+    sim_instance = Simulation(dataset_name, X_data, y_data, pretrained_weights)
     
     with simulations_lock:
         simulations[simulation_id] = sim_instance
