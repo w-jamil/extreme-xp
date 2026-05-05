@@ -33,19 +33,40 @@ cd online-classificaton
 python main.py --experiment simulation
 ```
 
-### Online Benchmark
+### Benchmark
+
+
+## Classification
+
 Online learning experiments on MNIST, Kaggle Credit Fraud, and Cybersecurity datasets.
 ```bash
 cd online-classificaton
 python main.py --experiment online
 ```
 
-### Kernel Benchmark
-Batch kernel experiments on the Cleveland Heart Disease (UCI) dataset.
+---
+
+## Regression — Delayed & Batched Feedback
+
+Online learning regression experiments studying CIRR, K-CIRR, Q-CIRR and QK-CIRR under delayed and batched feedback constraints.
+
+### Running All Experiments
 ```bash
-cd online-classificaton
-python main.py --experiment kernel
+cd online-regression
+pip install -r requirements.txt
+python main.py --experiment all --max-samples 5000 --results-dir results
 ```
+
+### Individual Experiments
+```bash
+python main.py --experiment delayed   # EXP1: UCI Household Power, variable delay
+python main.py --experiment batched   # EXP2: NSL-KDD, pack sizes K=1..50
+python main.py --experiment corollary # EXP3: concentrated vs perpetual delay
+```
+
+Results (CSV tables + plots) are written to `online-regression/results/`.
+
+> **Data:** NSL-KDD CSVs are included in `online-regression/data/`. The UCI Household Power Consumption dataset (`household_power_consumption.txt`, ~127 MB) must be downloaded separately from the [UCI ML Repository](https://archive.ics.uci.edu/dataset/235/individual+household+electric+power+consumption) and placed in `online-regression/data/`.
 
 ---
 

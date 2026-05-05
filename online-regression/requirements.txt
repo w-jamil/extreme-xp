@@ -1,0 +1,14 @@
+# Core
+numpy
+pandas
+scikit-learn
+scipy
+
+# Numba JIT compilation
+numba
+
+# Data handling
+pyarrow
+
+# Visualization (optional, for plotting results)
+matplotlib

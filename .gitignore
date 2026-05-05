@@ -14,12 +14,21 @@ results/
 !online-classification/data/kernel/
 !online-classification/data/kernel/.gitkeep
 
+# Exception: include online-regression data, results and CSVs
+!online-regression/data/
+!online-regression/data/**
+!online-regression/results/
+!online-regression/results/**
+!online-regression/results/*.csv
+!online-regression/results/*.png
+
 # Large dataset files
 *.parquet
 *.pkl
 *.zip
 *.h5
 *.hdf5
+online-regression/data/household_power_consumption.txt
 
 # Python
 __pycache__/
