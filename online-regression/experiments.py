@@ -24,6 +24,29 @@ from sklearn.preprocessing import StandardScaler
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+
+# ── Publication-quality plot defaults ──────────────────────────────────────
+plt.rcParams.update({
+    'figure.dpi':          300,
+    'savefig.dpi':         300,
+    'font.size':           10,
+    'axes.titlesize':      11,
+    'axes.labelsize':      10,
+    'xtick.labelsize':     9,
+    'ytick.labelsize':     9,
+    'legend.fontsize':     9,
+    'legend.framealpha':   0.85,
+    'lines.linewidth':     2.0,
+    'axes.linewidth':      0.8,
+    'grid.linewidth':      0.5,
+    'grid.alpha':          0.4,
+    'axes.grid':           True,
+    'axes.grid.which':     'both',
+    'grid.linestyle':      ':',
+    'pdf.fonttype':        42,   # embeds fonts for IEEE submission
+    'ps.fonttype':         42,
+})
 
 from algos import ALL_ALGORITHMS, KERNEL_ALGORITHMS, QUANTUM_ALGORITHMS, warmup_jit
 
@@ -198,7 +221,7 @@ def _plot_cumulative(curves, title, ylabel, output_path, xlabel='Iteration', log
     xlabel      : str   (default 'Iteration')
     log_log     : bool  if True both axes use log scale (default False)
     """
-    fig, ax = plt.subplots(figsize=(8, 5))
+    fig, ax = plt.subplots(figsize=(6, 4))
     for algo_name, vals in curves.items():
         iterations = np.arange(1, len(vals) + 1)
         ax.plot(
@@ -206,18 +229,17 @@ def _plot_cumulative(curves, title, ylabel, output_path, xlabel='Iteration', log
             label=algo_name,
             color=_PALETTE.get(algo_name, None),
             linestyle=_LINESTYLE.get(algo_name, '-'),
-            linewidth=1.6,
         )
     if log_log:
         ax.set_xscale('log')
         ax.set_yscale('log')
-    ax.set_title(title, fontsize=13)
-    ax.set_xlabel(xlabel, fontsize=11)
-    ax.set_ylabel(ylabel, fontsize=11)
-    ax.legend(fontsize=10)
-    ax.grid(True, which='both', linestyle=':', alpha=0.5)
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.legend()
+    ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f'{int(x):,}'))
     fig.tight_layout()
-    fig.savefig(output_path, dpi=150)
+    fig.savefig(output_path, bbox_inches='tight')
     plt.close(fig)
     print(f"  Plot -> {output_path}")
 
@@ -545,24 +567,24 @@ def run_corollary_test(output_dir, n_samples=5_000, seed=42):
           f"  final_cumloss={res2['cumulative_loss'][-1]:.2f}")
 
     # --- Plot ----------------------------------------------------------------
-    fig, ax = plt.subplots(figsize=(8, 5))
+    fig, ax = plt.subplots(figsize=(6, 4))
     iters = np.arange(1, n_samples + 1)
     ax.plot(iters, res1['cumulative_loss'],
             label=f'Case 1: Concentrated ($d_t={CONC_D}$ for $t\\leq{NUM_CONC}$, then 0)',
-            color='#1f77b4', linestyle='-', linewidth=1.6)
+            color='#1f77b4', linestyle='-')
     ax.plot(iters, res2['cumulative_loss'],
             label=f'Case 2: Perpetual ($d_t={PERP_D}$ for all $t$)',
-            color='#d62728', linestyle='--', linewidth=1.6)
+            color='#d62728', linestyle='--')
     ax.axvline(NUM_CONC + CONC_D, color='grey', linestyle=':', linewidth=1.0,
                label=f'Case 1 recovery (t={NUM_CONC + CONC_D})')
-    ax.set_title(f'EXP3: Corollary Test — Same Total Delay $D_T = {D_T:,}$', fontsize=13)
-    ax.set_xlabel('Iteration', fontsize=11)
-    ax.set_ylabel('Cumulative squared loss', fontsize=11)
-    ax.legend(fontsize=9)
-    ax.grid(True, linestyle=':', alpha=0.5)
+    ax.set_title(f'EXP3: Corollary Test — Same Total Delay $D_T = {D_T:,}$')
+    ax.set_xlabel('Iteration')
+    ax.set_ylabel('Cumulative squared loss')
+    ax.legend()
+    ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f'{int(x):,}'))
     fig.tight_layout()
     plot_path = os.path.join(output_dir, 'exp3_corollary.png')
-    fig.savefig(plot_path, dpi=150)
+    fig.savefig(plot_path, bbox_inches='tight')
     plt.close(fig)
     print(f"  Plot -> {plot_path}")
 
@@ -593,54 +615,52 @@ def make_combined_plot(output_dir, cumloss_exp1, cumloss_exp2,
     cor_case2    : 1-D array  (EXP3 perpetual)
     n_cor        : int        (length of corollary stream)
     """
-    fig, axes = plt.subplots(1, 3, figsize=(17, 5))
+    fig, axes = plt.subplots(1, 3, figsize=(14, 4))
 
     # --- Panel 1: EXP1 -------------------------------------------------------
     ax = axes[0]
     for name, vals in cumloss_exp1.items():
         iters = np.arange(1, len(vals) + 1)
         ax.plot(iters, vals, label=name,
-                color=_PALETTE.get(name), linestyle=_LINESTYLE.get(name, '-'),
-                linewidth=1.5)
-    ax.set_title('(a) EXP1: Delayed Feedback\n(Variable Delay, Power)', fontsize=10)
-    ax.set_xlabel('Iteration', fontsize=9)
-    ax.set_ylabel('Cumulative squared loss', fontsize=9)
-    ax.legend(fontsize=8)
-    ax.grid(True, linestyle=':', alpha=0.5)
+                color=_PALETTE.get(name), linestyle=_LINESTYLE.get(name, '-'))
+    ax.set_title('(a) EXP1: Variable Delay\n(UCI Household Power)')
+    ax.set_xlabel('Iteration')
+    ax.set_ylabel('Cumulative squared loss')
+    ax.legend()
+    ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f'{int(x):,}'))
 
     # --- Panel 2: EXP2 -------------------------------------------------------
     ax = axes[1]
     for name, vals in cumloss_exp2.items():
         iters = np.arange(1, len(vals) + 1)
         ax.plot(iters, vals, label=name,
-                color=_PALETTE.get(name), linestyle=_LINESTYLE.get(name, '-'),
-                linewidth=1.5)
-    ax.set_title('(b) EXP2: Batched Feedback\n(Pack=1, Cybersecurity)', fontsize=10)
-    ax.set_xlabel('Iteration', fontsize=9)
-    ax.set_ylabel('Cumulative squared loss', fontsize=9)
-    ax.legend(fontsize=8)
-    ax.grid(True, linestyle=':', alpha=0.5)
+                color=_PALETTE.get(name), linestyle=_LINESTYLE.get(name, '-'))
+    ax.set_title('(b) EXP2: Batched ($K=1$)\n(NSL-KDD Cybersecurity)')
+    ax.set_xlabel('Iteration')
+    ax.set_ylabel('Cumulative squared loss')
+    ax.legend()
+    ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f'{int(x):,}'))
 
     # --- Panel 3: Corollary --------------------------------------------------
     ax = axes[2]
     iters = np.arange(1, n_cor + 1)
-    ax.plot(iters, cor_case1, label='Case 1: Concentrated ($d_t=100$, $t\\leq500$)',
-            color='#1f77b4', linestyle='-', linewidth=1.5)
-    ax.plot(iters, cor_case2, label='Case 2: Perpetual ($d_t=10$)',
-            color='#d62728', linestyle='--', linewidth=1.5)
+    ax.plot(iters, cor_case1, label=r'Case 1: Concentrated ($d_t=100$, $t\leq500$)',
+            color='#1f77b4', linestyle='-')
+    ax.plot(iters, cor_case2, label=r'Case 2: Perpetual ($d_t=10$)',
+            color='#d62728', linestyle='--')
     NUM_CONC, CONC_D = 500, 100
-    ax.axvline(NUM_CONC + CONC_D, color='grey', linestyle=':', linewidth=0.9,
+    ax.axvline(NUM_CONC + CONC_D, color='grey', linestyle=':', linewidth=1.2,
                label=f'Case 1 recovery ($t={NUM_CONC + CONC_D}$)')
-    ax.set_title('(c) EXP3: Corollary Test\n(Same Total Delay $D_T=50{,}000$)', fontsize=10)
-    ax.set_xlabel('Iteration', fontsize=9)
-    ax.set_ylabel('Cumulative squared loss', fontsize=9)
-    ax.legend(fontsize=8)
-    ax.grid(True, linestyle=':', alpha=0.5)
+    ax.set_title(r'(c) EXP3: Corollary Test' + '\n' + r'(Same $D_T=50{,}000$)')
+    ax.set_xlabel('Iteration')
+    ax.set_ylabel('Cumulative squared loss')
+    ax.legend()
+    ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f'{int(x):,}'))
 
     fig.suptitle('Simulation of Delay Dynamics', fontsize=12, fontweight='bold')
     fig.tight_layout()
     out = os.path.join(output_dir, 'plot_combined.png')
-    fig.savefig(out, dpi=150)
+    fig.savefig(out, bbox_inches='tight')
     plt.close(fig)
     print(f"  Combined plot -> {out}")
     return out
