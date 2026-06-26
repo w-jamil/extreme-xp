@@ -7,6 +7,7 @@ Usage
   python main.py --experiment all          # run everything
   python main.py --experiment simulation   # 11 synthetic datasets
   python main.py --experiment online       # MNIST / Kaggle / Cyber / MIT-BIH
+  python main.py --experiment continual    # Task-IL / Domain-IL / Class-IL
 """
 
 import argparse
@@ -17,11 +18,13 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from algos import warmup_jit
-from experiments import (
+from online_experiments import (
     run_simulation,
     run_online_benchmark,
     ensure_reproducibility,
 )
+from batch_experiments import run_batch_benchmark
+from continual_experiments import run_continual_experiments
 
 
 def main():
@@ -29,7 +32,7 @@ def main():
         description='Run online-learning experiments.')
     parser.add_argument(
         '--experiment',
-        choices=['simulation', 'online', 'all'],
+        choices=['simulation', 'online', 'batch', 'continual', 'all'],
         default='all',
         help='Which experiment to run (default: all).')
     parser.add_argument(
@@ -64,10 +67,25 @@ def main():
     # ── Online Benchmark ─────────────────────────────────────────
     if args.experiment in ('online', 'all'):
         print("\n" + "#" * 80)
-        print("# EXPERIMENT 2: Online Benchmark (MNIST / Kaggle / Cyber / MIT-BIH)")
+        print("# EXPERIMENT 2: Online Benchmark (MNIST / Cyber / MIT-BIH)")
         print("#" * 80)
         warmup_jit()
         run_online_benchmark(data_dir, output_dir=results_dir)
+
+    # ── Batch Benchmark ──────────────────────────────────────────
+    if args.experiment in ('batch', 'all'):
+        print("\n" + "#" * 80)
+        print("# EXPERIMENT 3: Batch Benchmark (Kaggle Fraud / UNSW-NB15)")
+        print("#" * 80)
+        warmup_jit()
+        run_batch_benchmark(data_dir, output_dir=results_dir)
+
+    # ── Continual Learning ───────────────────────────────────────
+    if args.experiment in ('continual', 'all'):
+        print("\n" + "#" * 80)
+        print("# EXPERIMENT 4: Continual Learning (Task-IL / Domain-IL / Class-IL)")
+        print("#" * 80)
+        run_continual_experiments(data_dir, output_dir=results_dir)
 
     elapsed = time.time() - t0
     print(f"\nAll experiments completed in {elapsed/60:.1f} minutes.")
