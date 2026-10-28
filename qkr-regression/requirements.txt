@@ -9,6 +9,4 @@ numba
 
 # Data handling
 pyarrow
-
-# Visualization (optional, for plotting results)
-matplotlib
+pyreadr
