@@ -45,28 +45,34 @@ python main.py --experiment online
 ```
 
 ---
+## Online Regression
 
-## Regression — Delayed & Batched Feedback
+This directory contains regression experiments.
 
-Online learning regression experiments studying CIRR, K-CIRR, Q-CIRR and QK-CIRR under delayed and batched feedback constraints.
+### Setup
 
-### Running All Experiments
+From the repository root, navigate to the experiment directory and install the dependencies:
+
 ```bash
-cd online-regression
+cd pikrr-regression
 pip install -r requirements.txt
-python main.py --experiment all --max-samples 5000 --results-dir results
 ```
 
-### Individual Experiments
+### Run All Experiments
+
 ```bash
-python main.py --experiment delayed   # EXP1: UCI Household Power, variable delay
-python main.py --experiment batched   # EXP2: NSL-KDD, pack sizes K=1..50
-python main.py --experiment corollary # EXP3: concentrated vs perpetual delay
+python main.py --experiment all --max-samples 5000 --results-dir results # or python main.py
 ```
 
-Results (CSV tables + plots) are written to `online-regression/results/`.
 
-> **Data:** NSL-KDD CSVs are included in `online-regression/data/`. The UCI Household Power Consumption dataset (`household_power_consumption.txt`, ~127 MB) must be downloaded separately from the [UCI ML Repository](https://archive.ics.uci.edu/dataset/235/individual+household+electric+power+consumption) and placed in `online-regression/data/`.
+### Results
+
+CSV tables and plots are written to the directory specified by `--results-dir`. By default, running the commands above saves them to:
+
+```text
+pikrr-regression/results/
+```
+> **Data:** NSL-KDD CSVs are included in `online-regression/data/`. The UCI Household Power Consumption dataset (`household_power_consumption.txt`, ~127 MB) must be downloaded separately from the [UCI ML Repository](https://archive.ics.uci.edu/dataset/235/individual+household+electric+power+consumption) and placed in `pikrr-regression/data/`.
 
 ---
 
@@ -100,6 +106,6 @@ The `caml-initial-study/` directory preserves the foundational codebase for Deli
 ## Related working papers
 
 * **Jamil, W.** and Bouchachia, A. Online Gradient-based Learning. *In progress.*
-* **Jamil, W.** and Bouchachia, A. Online learning with Delayed & Batched feedback. *In progress.*
+* **Jamil, W.** and Bouchachia, A. Physics Informed Regularised Regression. *In progress.*
 
 ---

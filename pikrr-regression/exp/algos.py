@@ -359,6 +359,81 @@ class PIKRR:
 
 
 # ══════════════════════════════════════════════════════════════════════
+#  CLASSICAL KERNEL-RIDGE FAMILY (data-only, RBF) — KRR / IKRR
+# ══════════════════════════════════════════════════════════════════════
+
+class KRRReal:
+    """Classical kernel ridge regression (RBF), single direct solve."""
+    def __init__(self, length_scale=1.0, lambda_reg=1e-4):
+        self.length_scale = length_scale
+        self.lambda_reg = lambda_reg
+        self.X = None
+        self.alpha = None
+
+    def _K(self, X1, X2):
+        return rbf_kernel(X1, X2, gamma=0.5 / (self.length_scale ** 2))
+
+    def fit(self, X, y):
+        self.X = np.asarray(X)
+        K = self._K(self.X, self.X)
+        self.alpha = np.linalg.solve(
+            K + self.lambda_reg * np.eye(len(K)), np.asarray(y))
+        return self
+
+    def predict(self, X):
+        if self.alpha is None:
+            return np.zeros(len(X))
+        return self._K(np.asarray(X), self.X) @ self.alpha
+
+
+class IterativeKRRReal(KRRReal):
+    """Iteratively reweighted KRR (two solves), the data-only analogue of the
+    physics-informed IKRR/PI-IKRR solver.
+
+    The reweighting operator acts on the primal coefficients expressed in the
+    eigenbasis of the training Gram matrix, exactly as in the paper: with
+    H = U diag(s) U^T, the primal coordinates are root(s) * (U^T alpha), and
+    each reweighted solve uses G = diag(max(|primal|, delta)).
+    """
+    def __init__(self, length_scale=1.0, lambda_reg=1e-4, n_reweight=2,
+                 reweight_delta=1e-3):
+        super().__init__(length_scale, lambda_reg)
+        self.n_reweight = int(n_reweight)
+        self.reweight_delta = float(reweight_delta)
+        self._U = None
+        self._g = None
+
+    def fit(self, X, y):
+        self.X = np.asarray(X)
+        y = np.asarray(y)
+        K = self._K(self.X, self.X)
+        K = (K + K.T) * 0.5
+        n = len(K)
+        self.alpha = np.linalg.solve(K + self.lambda_reg * np.eye(n), y)
+        eig, U = np.linalg.eigh(K)
+        eig = np.clip(eig, 0.0, None)
+        root = np.sqrt(eig)
+        primal = root * (U.T @ self.alpha)
+        g = np.ones(n)
+        for _ in range(self.n_reweight - 1):
+            g = np.maximum(np.abs(primal), self.reweight_delta)
+            H_g = (U * (eig * g)) @ U.T
+            A_rw = H_g + self.lambda_reg * np.eye(n)
+            self.alpha = np.linalg.solve(A_rw, y)
+            primal = g * (root * (U.T @ self.alpha))
+        self._U, self._g = U, g
+        return self
+
+    def predict(self, X):
+        if self.alpha is None:
+            return np.zeros(len(X))
+        cross = self._K(np.asarray(X), self.X)
+        if self._U is None or self._g is None:
+            return cross @ self.alpha
+        return ((cross @ self._U) * self._g) @ (self._U.T @ self.alpha)
+
+
+# ══════════════════════════════════════════════════════════════════════
 #  PINN — NEURAL BASELINE
 # ══════════════════════════════════════════════════════════════════════
 

@@ -9,7 +9,7 @@ for the 13 streaming datasets of Figure 4):
 
 Usage:
     python significance_tests_online.py --input results/online_benchmark_results.csv \
-                                        --out results/significance
+                                        --out results/
 """
 import os
 import argparse
