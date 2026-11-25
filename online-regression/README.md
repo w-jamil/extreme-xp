@@ -5,28 +5,28 @@ Experimental code for the paper *Quantum Iterative Kernel Ridge Regression for P
 The suite uses **QIKRR** consistently throughout and separates predictive performance from computational cost:
 
 1. **Factorial predictive comparisons.** Matched same-kernel methods separate iterative reweighting, physics constraints, and simulated solver/noise. In particular, QIKRR is compared with **PI-IKRR** at the same two-solve iterative regularisation, PI-IKRR is compared with non-iterative **PI-KRR**, and data-only **IKRR** is compared with **KRR**.
-2. **Computational cost.** Measured classical CPU time and modelled fault-tolerant quantum gate/query counts are reported separately. Because HHL is simulated by classical linear algebra, these experiments do **not** demonstrate a measured quantum wall-clock speedup.
+2. **Computational cost.** Measured non-quantum CPU time and modelled fault-tolerant quantum gate/query counts are reported separately. Because HHL is simulated by linear algebra, these experiments do **not** demonstrate a measured quantum wall-clock speedup.
 
 ## Method matrix
 
 | Method | Kernel | Physics constraints | Regularisation and solver |
 |---|---|---:|---|
 | QIKRR (exact ZZ) | exact commuting ZZ | yes | two-solve iterative reweighting + simulated HHL |
-| PI-IKRR (exact ZZ) | exact commuting ZZ | yes | two-solve iterative reweighting + classical direct solves |
-| PI-KRR (exact ZZ) | exact commuting ZZ | yes | one classical direct solve |
+| PI-IKRR (exact ZZ) | exact commuting ZZ | yes | two-solve iterative reweighting + non-quantum direct solves |
+| PI-KRR (exact ZZ) | exact commuting ZZ | yes | one non-quantum direct solve |
 | QIKRR (RBF) | Gaussian RBF | yes | two-solve iterative reweighting + simulated HHL |
-| PI-IKRR (RBF) | Gaussian RBF | yes | two-solve iterative reweighting + classical direct solves |
-| PI-KRR (RBF) | Gaussian RBF | yes | one classical direct solve |
+| PI-IKRR (RBF) | Gaussian RBF | yes | two-solve iterative reweighting + non-quantum direct solves |
+| PI-KRR (RBF) | Gaussian RBF | yes | one non-quantum direct solve |
 | QIKRR (RFF sim.) | finite-dimensional RFF surrogate | yes | two-solve iterative reweighting + simulated HHL |
-| PI-IKRR (RFF sim.) | finite-dimensional RFF surrogate | yes | two-solve iterative reweighting + classical direct solves |
-| PI-KRR (RFF sim.) | finite-dimensional RFF surrogate | yes | one classical direct solve |
+| PI-IKRR (RFF sim.) | finite-dimensional RFF surrogate | yes | two-solve iterative reweighting + non-quantum direct solves |
+| PI-KRR (RFF sim.) | finite-dimensional RFF surrogate | yes | one non-quantum direct solve |
 | QIKRR (RFF, no phys) | RFF surrogate | no | two-solve iterative reweighting + simulated HHL |
-| IKRR (RFF, no phys) | RFF surrogate | no | two-solve iterative reweighting + classical direct solves |
-| KRR (RFF, no phys) | RFF surrogate | no | one classical direct solve |
-| IKRR (exact ZZ, no phys) | exact commuting ZZ | no | two-solve iterative reweighting + classical direct solves |
-| KRR (exact ZZ, no phys) | exact commuting ZZ | no | one classical direct solve |
-| IKRR (RBF, no phys) | Gaussian RBF | no | two-solve iterative reweighting + classical direct solves |
-| KRR (RBF, no phys) | Gaussian RBF | no | one classical direct solve |
+| IKRR (RFF, no phys) | RFF surrogate | no | two-solve iterative reweighting + non-quantum direct solves |
+| KRR (RFF, no phys) | RFF surrogate | no | one non-quantum direct solve |
+| IKRR (exact ZZ, no phys) | exact commuting ZZ | no | two-solve iterative reweighting + non-quantum direct solves |
+| KRR (exact ZZ, no phys) | exact commuting ZZ | no | one non-quantum direct solve |
+| IKRR (RBF, no phys) | Gaussian RBF | no | two-solve iterative reweighting + non-quantum direct solves |
+| KRR (RBF, no phys) | Gaussian RBF | no | one non-quantum direct solve |
 | PINN | neural representation | yes | Adam |
 
 For each kernel, the factorial comparisons are:
@@ -43,7 +43,7 @@ A ZZ-versus-RBF comparison alone measures kernel inductive bias, not a quantum-s
 
 QIKRR, PI-IKRR, and IKRR use `n_reweight=2`: an initial isotropic solve followed by one fixed-operator reweighted solve. PI-KRR and KRR use one solve. Offline fits—including the full causal refits in EXP 2—define the feature coordinates through the eigenbasis of the training-functional Gram matrix; native incremental RFF updates use the explicit RFF coordinates. If \(w_e\) is the previous primal coefficient vector, the next operator is \(G_e=\operatorname{diag}(\max(|w_e|,\delta))\), with \(\delta=10^{-3}\). The implementation reweights these primal feature coefficients—not the dual Kansa coefficients—so the solved systems match the paper's fixed-\(G_e\) formulation.
 
-Physics-informed QIKRR/PI-IKRR/PI-KRR triples share hyperparameters selected by classical PI-KRR. Data-only QIKRR/IKRR/KRR triples share hyperparameters selected by classical KRR using validation solution error alone. These are controlled common-setting comparisons, not claims of global hyperparameter optimality.
+Physics-informed QIKRR/PI-IKRR/PI-KRR triples share hyperparameters selected by non-quantum PI-KRR. Data-only QIKRR/IKRR/KRR triples share hyperparameters selected by non-quantum KRR using validation solution error alone. These are controlled common-setting comparisons, not claims of global hyperparameter optimality.
 
 ## Experiments
 
@@ -51,7 +51,7 @@ Physics-informed QIKRR/PI-IKRR/PI-KRR triples share hyperparameters selected by 
 - **EXP 2 — Causal sequential learning on all four PDEs and all three kernels.** For each RFF, RBF, and exact-ZZ kernel, the suite runs QIKRR, PI-IKRR, PI-KRR, and data-only QIKRR, IKRR, and KRR under immediate, delayed (\(d=10\)), and batched (\(B=20\)) feedback on \(T=200\) noisy observations. A fixed set of 60 collocation points is available before the stream for physics-informed models; data-only models omit it. Hyperparameters and the clip bound come from an independently generated calibration stream. Same-kernel hindsight references have matching physics access. Four problems, three kernels, six methods, three modes, and five seeds give **1,080 raw rows**, plus **1,260 matched factorial comparisons**. Reports cumulative loss, reference gap, final solution error/residual, runtime, refits, and linear-solve counts.
 - **EXP 3 — Spectra and effective dimension.** Compares the RFF surrogate, RBF, and Matérn (\(\nu=1\)) Gram matrices on Poisson-2D and Poisson-4D inputs. These are spectral diagnostics, not realised-regret lower bounds.
 - **EXP 4 — Estimation and batching models.** Synthetic direct-Hadamard-sampling error scaling (\(S^{-1/2}\)) versus QAE scaling (\(S^{-1}\)), and causal batching refit/inversion counts. This is a scaling simulation, not a circuit-level QAE implementation.
-- **EXP 5 — Classical time and modelled quantum cost.** Measures classical Kansa-system assembly/solve time and evaluates HHL/QLSA gate models at measured condition numbers. CPU seconds and gate counts are plotted separately and are never converted into a hardware speedup claim.
+- **EXP 5 — non-quantum time and modelled quantum cost.** Measures non-quantum Kansa-system assembly/solve time and evaluates HHL/QLSA gate models at measured condition numbers. CPU seconds and gate counts are plotted separately and are never converted into a hardware speedup claim.
 - **EXP 6 — Exact commuting ZZ spectrum.** Evaluates the closed-form ZZ fidelity kernel and verifies its finite-support spectrum and bounded effective dimension.
 
 ## Verified five-seed factorial outcome
@@ -60,7 +60,7 @@ The completed EXP 1 run contains **340 rows**: four problems, five seeds, and 17
 
 - **PI-IKRR versus PI-KRR:** PI-IKRR wins **35/60** accuracy comparisons and **26/60** residual comparisons. Exact ZZ gives a geometric-mean error ratio of **0.968** and 14/20 accuracy wins, but its residual ratio is 1.010. RBF and RFF geometric-mean error ratios are above one. Iteration is therefore not uniformly superior with physics.
 - **IKRR versus KRR:** IKRR wins **40/60** accuracy comparisons and **31/60** residual comparisons, with aggregated geometric-mean ratios **0.965** and **0.979**. RFF-IKRR has lower mean error on all four problems, but RBF-IKRR is worse on Poisson-2D and Poisson-4D, and the median IKRR/KRR time ratio is **2.23**. The results do not support an “IKRR beats KRR in all ways” claim.
-- **QIKRR versus PI-IKRR:** at matched iterative regularisation, QIKRR wins only **13/60** accuracy and **8/60** residual comparisons. Exact-ZZ QIKRR has no wins in either metric. The simulated HHL perturbations degrade accuracy relative to the classical two-solve control.
+- **QIKRR versus PI-IKRR:** at matched iterative regularisation, QIKRR wins only **13/60** accuracy and **8/60** residual comparisons. Exact-ZZ QIKRR has no wins in either metric. The simulated HHL perturbations degrade accuracy relative to the non-quantum two-solve control.
 - **Physics ablations:** PI-KRR/KRR and PI-IKRR/IKRR each win **60/60** residual comparisons, and respectively win **54/60** and **53/60** accuracy comparisons. Collocation also enlarges the system and increases measured runtime.
 - **Timing:** the median QIKRR/PI-KRR time ratio is **1.40**, and the matched two-solve QIKRR/PI-IKRR median is **1.01**. There is no measured wall-clock speed advantage.
 
@@ -72,7 +72,7 @@ The completed EXP 2 run contains **1,080 raw rows** and **1,260 matched comparis
 - **QIKRR versus PI-IKRR:** QIKRR wins only **14/180** comparisons, with aggregate ratio **1.0079**. Aggregating over problems and kernels gives ratios **1.0210**, **1.0019**, and **1.0011** under immediate, delayed, and batched feedback. There is no matched sequential-loss advantage for the simulated solver.
 - **Largest isolated gain:** AdvecDiff-1D with RFF and immediate feedback has QIKRR/PI-KRR ratio **0.9641**, but its matched QIKRR/PI-IKRR ratio is **1.0314**. The gain over non-iterative PI-KRR is therefore associated with iterative regularisation, not simulated HHL.
 - **Feedback staleness:** delayed feedback increases mean cumulative loss relative to immediate feedback in **72/72** problem/kernel/method groups; batched feedback also increases loss in **72/72** groups. Immediate, delayed, and batched feedback require respectively 200, 191, and 10 refits; the two-solve methods therefore require 400, 382, and 20 solves.
-- **Runtime:** the median QIKRR/PI-KRR ratio is **1.45**, and the matched QIKRR/PI-IKRR median is **1.01**. These are measured classical CPU-time ratios and do not indicate quantum speedup.
+- **Runtime:** the median QIKRR/PI-KRR ratio is **1.45**, and the matched QIKRR/PI-IKRR median is **1.01**. These are measured non-quantum CPU-time ratios and do not indicate quantum speedup.
 
 See `../empirical.tex` for the manuscript-ready interpretation and limitations.
 
@@ -86,7 +86,7 @@ See `../empirical.tex` for the manuscript-ready interpretation and limitations.
 | `experiments.py` | EXP 1–6, validation-only tuning, factorial comparisons, CSV export |
 | `make_figures.py` | Paper figures from `results/*.csv` |
 | `main.py` | Command-line entry point |
-| `../empirical.tex` | Manuscript empirical-validation section |
+
 
 ## Usage
 
@@ -158,7 +158,7 @@ By default figures are written to `./figures/`. Set `QIKRR_FIGURE_DIR` to overri
 
 ## Simulation and reporting limitations
 
-- The RFF backend is a classical finite-dimensional surrogate, not an exact simulation of a quantum circuit.
+- The RFF backend is a finite-dimensional surrogate, not an exact simulation of a quantum circuit.
 - The exact ZZ backend evaluates a closed-form fidelity kernel and its analytic derivatives; no quantum circuit is executed.
 - `HHLSimulator` performs `numpy.linalg.solve`, adds optional precision-scaled noise, and accumulates the gate model \(\log_2(n)\kappa^2\log_2(1/\epsilon)\). For nonsymmetric Kansa matrices, a quantum implementation would require a standard Hermitian dilation or an equivalent non-Hermitian linear-system construction; the model suppresses its constant overhead.
 - Iterative reweighting performs `n_reweight=2` linear solves per refit by default. Both refits and actual linear solves are reported; batching reduces refits by the batch factor while the constant reweighting multiplier remains visible.
