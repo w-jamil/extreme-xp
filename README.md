@@ -105,7 +105,6 @@ The `caml-initial-study/` directory preserves the foundational codebase for Deli
 
 ## Related working papers
 
-* **Jamil, W.** and Bouchachia, A. Online Gradient-based Learning. *In progress.*
+* **Jamil, W.** and Bouchachia, A. Online Gradient-based Classification. *In progress.*
 * **Jamil, W.** and Bouchachia, A. Physics Informed Regularised Regression. *In progress.*
-
 ---
